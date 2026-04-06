@@ -846,7 +846,11 @@ Nhiệm vụ của bạn:
                                 response = model.generate_content(gemini_history)
                                 ai_reply = response.text
                             except Exception as e:
-                                ai_reply = f"⚠️ Lỗi kết nối API Gemini: {str(e)}"
+                                error_msg = str(e)
+                                if "429" in error_msg or "quota" in error_msg.lower():
+                                    ai_reply = "⏳ Tín hiệu kết nối vũ trụ đang bị nghẽn (AI đang quá tải). Bạn vui lòng đợi khoảng 1 phút rồi thử gửi lại nhé!"
+                                else:
+                                    ai_reply = f"⚠️ Lỗi kết nối hệ thống: {error_msg}"
                     else:
                         time.sleep(1)
                         if user_turns >= 3:
