@@ -715,7 +715,13 @@ def render_teach_ai():
 
     if not st.session_state.ai_done:
         placeholder_text = "Nhập lời giải thích của bạn... VD: 'Vì chiết suất lớn nên...'"
-        user_input = st.text_area("", placeholder=placeholder_text, height=120, label_visibility="collapsed")
+        
+        # 1. KHỞI TẠO BỘ NHỚ CHO Ô TEXT_AREA NẾU CHƯA CÓ
+        if "current_chat_input" not in st.session_state:
+            st.session_state.current_chat_input = ""
+
+        # 2. GẮN KEY VÀO TEXT_AREA
+        user_input = st.text_area("", placeholder=placeholder_text, height=120, label_visibility="collapsed", key="current_chat_input")
 
         col1, col2 = st.columns([2, 1])
         with col1:
@@ -723,40 +729,37 @@ def render_teach_ai():
                 if len(user_input.strip()) < 10:
                     st.error("Hãy giải thích chi tiết hơn! (ít nhất 10 ký tự)")
                 else:
-                    # 1. Lưu tin nhắn của người dùng
+                    # Lưu tin nhắn của người dùng
                     st.session_state.ai_chat_history.append({"role": "user", "content": user_input})
+                    
+                    # 3. XÓA TRẮNG Ô NHẬP LIỆU NGAY LẬP TỨC
+                    st.session_state.current_chat_input = ""
                     
                     user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
                     
-                    # 1. Tổng hợp Learning State & Trend
-                    mistakes_list = [m['type'] for m in st.session_state.student_model['mistakes'][-3:]]
-                    mastery_score = st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)
-                    consecutive_errors = st.session_state.student_model["learning_state"]["consecutive_errors"]
-                    
+                    # Chuẩn bị dữ liệu học sinh dạng chuỗi để đưa cho AI
                     student_data = f"""
-                    - Điểm nắm vững (Mastery): {mastery_score:.2f} (Dưới 0.5 là Yếu, trên 0.8 là Giỏi)
-                    - Lỗi tư duy gần đây: {mistakes_list}
-                    - Trạng thái: Sai {consecutive_errors} câu liên tiếp (Mức độ mệt mỏi/nản chí).
+                    - Lịch sử sai lầm: {[m['type'] for m in st.session_state.student_model['mistakes'][-3:]]} 
+                    - Điểm nắm vững kiến thức này (0-1.0): {st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)}
                     """
 
-                    # 2. Prompt hợp nhất tiến hóa
-                    system_prompt = f"""Bạn là một Hệ thống Gia sư AI cá nhân hóa (Adaptive Tutor) chuyên Vật lý.
-Context bài học: {scenario['ai_context']}
+                    # 4. CẬP NHẬT PROMPT: Cấm AI tiết lộ thông số
+                    system_prompt = f"""Bạn là một Gia sư AI cá nhân hóa chuyên Vật lý.
+Context bài học hiện tại: {scenario['ai_context']}
 
---- DỮ LIỆU NHẬN THỨC CỦA HỌC SINH ---
+--- DỮ LIỆU NHẬN THỨC CỦA HỌC SINH NÀY ---
 {student_data}
---------------------------------------
+------------------------------------------
 
-Đây là lượt chat thứ {user_turns}. Nhiệm vụ của bạn:
-1. Đọc lời giải thích của học sinh và PHÂN TÍCH DỰA TRÊN DỮ LIỆU NHẬN THỨC:
-   - Nếu học sinh đang "Sai liên tiếp nhiều câu": Hãy an ủi, giảm độ khó xuống mức tối thiểu, dùng ví dụ cực kỳ đời thường để lấy lại tự tin.
-   - Nếu có "Lỗi tư duy gần đây": Hỏi xoáy vào điểm mù đó theo phương pháp Socratic để họ tự nhận ra lỗi.
-   - Nếu "Mastery" cao (>0.8): Hãy hỏi một câu đố mẹo hoặc ứng dụng kỹ thuật nâng cao.
-2. Đặt THÊM 1 câu hỏi phụ gợi mở (Tuyệt đối KHÔNG dùng từ khóa bí mật).
-3. Nếu học sinh giải thích CHÍNH XÁC hoặc bảo "không biết/chịu thua": 
-   - Tóm tắt lại kiến thức một cách thân thiện để vá lỗ hổng tư duy.
+Đây là lượt chat thứ {user_turns}.
+Nhiệm vụ của bạn:
+1. Đọc kỹ lời giảng của học sinh. PHẢI CĂN CỨ VÀO DỮ LIỆU NHẬN THỨC Ở TRÊN để điều chỉnh cách nói chuyện.
+   TUYỆT ĐỐI KHÔNG được nhắc đến các từ như "Mastery", "Điểm số", "Lịch sử sai lầm" trong câu trả lời của bạn. Hãy cư xử thật tự nhiên.
+2. Nếu lời giảng CHƯA ĐỦ RÕ: Hãy hỏi THÊM 1 câu hỏi phụ gợi mở (ngắn gọn 2-3 câu). Tuyệt đối KHÔNG dùng từ khóa bí mật.
+3. Nếu học sinh giải thích RẤT CHÍNH XÁC hoặc bảo "không biết/chịu thua": 
+   - Tóm tắt lại kiến thức một cách thân thiện.
    - BẮT BUỘC chèn cụm từ [ĐÃ_HIỂU] vào cuối câu.
-4. Lượt chat thứ 5 bắt buộc chốt vấn đề bằng cụm từ [ĐÃ_HIỂU]."""
+4. Lượt chat thứ 5 bắt buộc phải chốt vấn đề và dùng cụm từ [ĐÃ_HIỂU]."""
 
                     # 3. Gọi API Gemini
                     if has_api:
