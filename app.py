@@ -9,8 +9,8 @@ from worlds_data import WORLDS
 # CẤU HÌNH TRANG
 # ==========================================
 st.set_page_config(
-    page_title="Physics Glitch - Khúc Xạ Ánh Sáng",
-    page_icon="🌈",
+    page_title="Physics Glitch - Đa Vũ Trụ",
+    page_icon="⚡",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
