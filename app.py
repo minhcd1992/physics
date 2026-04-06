@@ -143,6 +143,7 @@ p, label, span, div, li, a {
 
 /* ---- Scenario box ---- */
 .scenario-box {
+    display: block;
     background: #07101e;
     border: 1px solid #ff4b4b55;
     border-left: 3px solid #ff4b4b;
@@ -191,6 +192,7 @@ p, label, span, div, li, a {
 
 /* ---- Explain box ---- */
 .explain-box {
+    display: block;
     background: #071c10;
     border: 1px solid #00ff8833;
     border-left: 3px solid #00ff88;
@@ -204,6 +206,7 @@ p, label, span, div, li, a {
 
 /* ---- AI chat ---- */
 .ai-bubble {
+    display: block;
     background: linear-gradient(135deg, #0d1a2e, #0a1628);
     border: 1px solid #00d4ff33;
     border-radius: 12px 12px 12px 0;
@@ -221,6 +224,7 @@ p, label, span, div, li, a {
     margin-bottom: 0.5rem;
 }
 .user-bubble {
+    display: block;
     background: #0f1f10;
     border: 1px solid #00ff8833;
     border-radius: 12px 12px 0 12px;
@@ -581,7 +585,7 @@ def render_scenario():
     render_svg_simulation(scenario)
     
     # Scenario box
-    st.markdown(f'<div class="scenario-box">{scenario["statement"]}</div>', unsafe_allow_html=True)
+    st.markdown(f'<span class="scenario-box">{scenario["statement"]}</span>', unsafe_allow_html=True)
 
     st.markdown('<p style="color:#7eb8d4;margin-bottom:0.5rem">Theo khoa học thực tế, nhận định trên là:</p>', unsafe_allow_html=True)
 
@@ -669,14 +673,14 @@ def render_analysis():
         st.markdown(f'<div class="badge-wrong">✗ CHƯA CHÍNH XÁC — Đáp án: {scenario["correct_answer"]}</div>', unsafe_allow_html=True)
 
     # Scenario lại
-    st.markdown(f'<div class="scenario-box" style="opacity:0.7;font-size:0.9rem">{scenario["statement"]}</div>', unsafe_allow_html=True)
+    st.markdown(f'<span class="scenario-box" style="display:block; opacity:0.7; font-size:0.9rem">{scenario["statement"]}</span>', unsafe_allow_html=True)
 
     # Giải thích đã được gộp lại thành 1 khối
     st.markdown(f"""
-    <div class="explain-box">
-        <strong style="color:#00ff88;font-family:'Exo 2',sans-serif;font-size:0.8rem;letter-spacing:0.1em">GIẢI THÍCH KHOA HỌC</strong>
-        <p style="margin:0.5rem 0 0;color:#b8ffe0">{scenario["explanation"]}</p>
-    </div>
+    <span class="explain-box">
+        <strong style="color:#00ff88;font-family:'Exo 2',sans-serif;font-size:0.8rem;letter-spacing:0.1em">GIẢI THÍCH KHOA HỌC</strong><br><br>
+        <span style="color:#b8ffe0">{scenario["explanation"]}</span>
+    </span>
     """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -710,10 +714,9 @@ def render_teach_ai():
     # Hiển thị lịch sử chat
     for msg in st.session_state.ai_chat_history:
         if msg["role"] == "user":
-            st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<span class="user-bubble">{msg["content"]}</span>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
-
+            st.markdown(f'<span class="ai-bubble">{msg["content"]}</span>', unsafe_allow_html=True)
     if not st.session_state.ai_done:
         placeholder_text = "Nhập lời giải thích của bạn... VD: 'Vì chiết suất lớn nên...'"
         
