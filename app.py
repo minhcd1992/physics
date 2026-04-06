@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import time
+import copy
 
 # ==========================================
 # CẤU HÌNH TRANG
@@ -371,21 +372,26 @@ def progress_bar(value, max_val):
 
 def detect_misconception(user_answer, scenario):
     text = scenario["statement"].lower()
-    # Phân tích dựa trên các từ khóa trong tình huống
-    if "truyền thẳng" in text:
-        return "Lỗi tư duy: Tin rằng ánh sáng không bao giờ bị bẻ cong (bỏ qua sự thay đổi môi trường)."
-    if "vị trí thực tế" in text:
-        return "Lỗi tư duy: Áp đặt trực giác đời thường, nhầm lẫn giữa ảnh ảo do khúc xạ tạo ra và vật thật."
-    if "góc nghiêng lớn" in text:
-        return "Lỗi tư duy: Chưa biết về hiện tượng Phản xạ toàn phần và góc tới hạn."
-    if "tăng tốc độ" in text:
-        return "Lỗi tư duy: Hiểu ngược mối quan hệ giữa chiết suất (n) và vận tốc truyền sáng (v)."
-    if "nhuộm màu" in text:
-        return "Lỗi tư duy: Hiểu sai bản chất ánh sáng trắng (cho rằng nó là đơn sắc)."
-    if "chặn bớt ánh sáng" in text:
-        return "Lỗi tư duy: Hiểu sai cơ chế tạo ảnh của thấu kính hội tụ (bỏ qua sự giao hội tia sáng)."
     
-    return f"Lỗi tư duy: Nhầm lẫn cơ bản về {scenario['concept']}."
+    # Nếu user trả lời "Đúng" cho một nhận định "Sai" -> Phân tích lỗi
+    if user_answer == "Đúng" and scenario["correct_answer"] == "Sai":
+        if "truyền thẳng" in text:
+            return "concept_confusion: Bỏ qua sự thay đổi tốc độ ánh sáng giữa 2 môi trường."
+        if "vị trí thực tế" in text:
+            return "real_vs_virtual: Áp đặt trực giác đời thường, nhầm lẫn ảnh ảo thành vật thật."
+        if "góc nghiêng lớn" in text:
+            return "missing_concept: Không biết về hiện tượng Phản xạ toàn phần và góc tới hạn."
+        if "tăng tốc độ" in text:
+            return "inverse_relation_error: Hiểu ngược mối quan hệ n = c/v."
+        if "nhuộm màu" in text:
+            return "nature_of_light: Hiểu sai bản chất ánh sáng trắng là chùm sáng đa sắc."
+        if "chặn bớt ánh sáng" in text:
+            return "mechanism_error: Không hiểu cơ chế tạo ảnh bằng sự giao hội tia sáng của thấu kính."
+            
+    if user_answer == "Không chắc chắn":
+        return "lack_of_confidence: Học sinh thiếu tự tin hoặc chưa từng học khái niệm này."
+        
+    return "unidentified_error"
 
 def render_svg_simulation(svg_type):
     """Hàm vẽ các mô phỏng hiện tượng khúc xạ bằng HTML/SVG"""
@@ -583,23 +589,26 @@ WORLDS = {
 defaults = {
     "page": "home",
     "selected_world": None,
-    "scenario_idx": 0,          # Dùng để đếm xem đang ở câu thứ mấy
-    "current_sc_id": None,      # ID của tình huống hiện tại (phục vụ adaptive)
+    "scenario_idx": 0,
+    "current_sc_id": None,
     "user_answer": None,
     "score": 0,
     "answered_scenarios": set(),
     "ai_chat_history": [],
     "ai_done": False,
     "show_explanation": False,
-    # THÊM BỘ NÃO AI (MEMORY LAYER)
     "student_model": {
-        "concept_mastery": {},   # Điểm số hiểu biết từng khái niệm (-1 đến 1)
-        "mistakes": [],          # Lịch sử sai lầm cụ thể
+        "concept_mastery": {},   
+        "mistakes": [],          
+        "learning_state": {      # Chuẩn bị cho các bản nâng cấp sau
+            "fatigue": 0.0,
+            "consecutive_errors": 0
+        }
     }
 }
 for k, v in defaults.items():
     if k not in st.session_state:
-        st.session_state[k] = v
+        st.session_state[k] = copy.deepcopy(v) # Sửa lỗi Shared Reference
 
 def go(page):
     st.session_state.page = page
@@ -789,22 +798,33 @@ def render_scenario():
                 if concept not in st.session_state.student_model["concept_mastery"]:
                     st.session_state.student_model["concept_mastery"][concept] = 0.5
                 
-                # KIỂM TRA VÀ CẬP NHẬT STUDENT MODEL
+                # Áp dụng thuật toán EMA (Exponential Moving Average)
+                old_mastery = st.session_state.student_model["concept_mastery"][concept]
+                
                 if clean == scenario["correct_answer"]:
-                    # Cộng điểm nếu đúng, tối đa là 1.0
-                    st.session_state.student_model["concept_mastery"][concept] = min(1.0, st.session_state.student_model["concept_mastery"][concept] + 0.2)
+                    # Trả lời đúng: 70% cũ + 30% mới (1.0)
+                    new_mastery = 0.7 * old_mastery + 0.3 * 1.0
+                    st.session_state.student_model["concept_mastery"][concept] = new_mastery
+                    st.session_state.student_model["learning_state"]["consecutive_errors"] = 0
+                    
                     if scenario["id"] not in st.session_state.answered_scenarios:
                         st.session_state.score += 10
                 else:
-                    # Trừ điểm nếu sai, tối thiểu là 0.0
-                    st.session_state.student_model["concept_mastery"][concept] = max(0.0, st.session_state.student_model["concept_mastery"][concept] - 0.3)
-                    # Ghi nhận sai lầm vào lịch sử
+                    # Trả lời sai/Không chắc: 70% cũ + 30% mới (0.0)
+                    new_mastery = 0.7 * old_mastery + 0.3 * 0.0
+                    st.session_state.student_model["concept_mastery"][concept] = new_mastery
+                    st.session_state.student_model["learning_state"]["consecutive_errors"] += 1
+                    
+                    # Ghi nhận sai lầm và chặn Memory Leak (Giới hạn 20 lỗi gần nhất)
                     mistake_type = detect_misconception(clean, scenario)
-                    st.session_state.student_model["mistakes"].append({
+                    mistakes = st.session_state.student_model["mistakes"]
+                    mistakes.append({
                         "concept": concept,
                         "type": mistake_type,
                         "user_chose": clean
                     })
+                    if len(mistakes) > 20:
+                        mistakes.pop(0)
 
                 st.session_state.answered_scenarios.add(scenario["id"])
                 st.session_state.ai_chat_history = []
@@ -899,31 +919,35 @@ def render_teach_ai():
                     
                     user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
                     
-                    # Chuẩn bị dữ liệu học sinh dạng chuỗi để đưa cho AI
+                    # 1. Tổng hợp Learning State & Trend
+                    mistakes_list = [m['type'] for m in st.session_state.student_model['mistakes'][-3:]]
+                    mastery_score = st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)
+                    consecutive_errors = st.session_state.student_model["learning_state"]["consecutive_errors"]
+                    
                     student_data = f"""
-                    - Lịch sử sai lầm: {[m['type'] for m in st.session_state.student_model['mistakes'][-3:]]} 
-                    - Điểm nắm vững kiến thức này (0-1.0): {st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)}
+                    - Điểm nắm vững (Mastery): {mastery_score:.2f} (Dưới 0.5 là Yếu, trên 0.8 là Giỏi)
+                    - Lỗi tư duy gần đây: {mistakes_list}
+                    - Trạng thái: Sai {consecutive_errors} câu liên tiếp (Mức độ mệt mỏi/nản chí).
                     """
 
-                    # 2. Prompt hợp nhất: Giao quyền tự quyết & Đưa bộ nhớ vào
-                    system_prompt = f"""Bạn là một Gia sư AI cá nhân hóa chuyên Vật lý.
-Context bài học hiện tại: {scenario['ai_context']}
+                    # 2. Prompt hợp nhất tiến hóa
+                    system_prompt = f"""Bạn là một Hệ thống Gia sư AI cá nhân hóa (Adaptive Tutor) chuyên Vật lý.
+Context bài học: {scenario['ai_context']}
 
---- DỮ LIỆU NHẬN THỨC CỦA HỌC SINH NÀY ---
+--- DỮ LIỆU NHẬN THỨC CỦA HỌC SINH ---
 {student_data}
-------------------------------------------
+--------------------------------------
 
-Đây là lượt chat thứ {user_turns}.
-Nhiệm vụ của bạn:
-1. Đọc kỹ lời giảng của học sinh. PHẢI CĂN CỨ VÀO DỮ LIỆU NHẬN THỨC Ở TRÊN:
-   - Nếu học sinh từng có "Lịch sử sai lầm" liên quan: Hãy đặt câu hỏi xoáy sâu vào chính sai lầm đó để xem họ thực sự hiểu chưa.
-   - Nếu "Điểm nắm vững" thấp (<0.5): Giải thích bằng ngôn ngữ cực kỳ đời thường, đưa ví dụ thực tế gần gũi.
-   - Nếu "Điểm nắm vững" cao (>0.8): Hãy hỏi một câu mở rộng, nâng cao, hoặc đố mẹo.
-2. Nếu lời giảng CHƯA ĐỦ RÕ: Hãy hỏi THÊM 1 câu hỏi phụ gợi mở (ngắn gọn 2-3 câu). Tuyệt đối KHÔNG dùng từ khóa bí mật.
-3. Nếu học sinh giải thích RẤT CHÍNH XÁC hoặc bảo "không biết/chịu thua": 
-   - Tóm tắt lại kiến thức một cách thân thiện.
+Đây là lượt chat thứ {user_turns}. Nhiệm vụ của bạn:
+1. Đọc lời giải thích của học sinh và PHÂN TÍCH DỰA TRÊN DỮ LIỆU NHẬN THỨC:
+   - Nếu học sinh đang "Sai liên tiếp nhiều câu": Hãy an ủi, giảm độ khó xuống mức tối thiểu, dùng ví dụ cực kỳ đời thường để lấy lại tự tin.
+   - Nếu có "Lỗi tư duy gần đây": Hỏi xoáy vào điểm mù đó theo phương pháp Socratic để họ tự nhận ra lỗi.
+   - Nếu "Mastery" cao (>0.8): Hãy hỏi một câu đố mẹo hoặc ứng dụng kỹ thuật nâng cao.
+2. Đặt THÊM 1 câu hỏi phụ gợi mở (Tuyệt đối KHÔNG dùng từ khóa bí mật).
+3. Nếu học sinh giải thích CHÍNH XÁC hoặc bảo "không biết/chịu thua": 
+   - Tóm tắt lại kiến thức một cách thân thiện để vá lỗ hổng tư duy.
    - BẮT BUỘC chèn cụm từ [ĐÃ_HIỂU] vào cuối câu.
-4. Lượt chat thứ 5 bắt buộc phải chốt vấn đề và dùng cụm từ [ĐÃ_HIỂU]."""
+4. Lượt chat thứ 5 bắt buộc chốt vấn đề bằng cụm từ [ĐÃ_HIỂU]."""
 
                     # 3. Gọi API Gemini
                     if has_api:
@@ -1021,31 +1045,63 @@ def render_result():
     progress_bar(score, max_score)
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-    # Nhận xét
+    # Nhận xét chung
     if pct == 100:
         st.markdown('<div class="badge-correct" style="display:block;text-align:center;padding:0.8rem">🌟 HOÀN HẢO — Bạn là bậc thầy quang học!</div>', unsafe_allow_html=True)
         msg = "Xuất sắc! Bạn đã phát hiện tất cả lỗi sai và hiểu bản chất hiện tượng khúc xạ thật sự."
     elif pct >= 60:
         st.markdown('<div class="badge-unsure" style="display:block;text-align:center;padding:0.8rem">👍 TỐT — Còn vài điểm cần ôn lại</div>', unsafe_allow_html=True)
-        msg = "Bạn đã hiểu phần lớn. Hãy đọc lại giải thích của những tình huống bạn chưa chắc chắn."
+        msg = "Bạn đã hiểu phần lớn. Hãy chú ý đến danh sách kiến thức cần ôn tập bên dưới nhé."
     else:
-        st.markdown('<div class="badge-wrong" style="display:block;text-align:center;padding:0.8rem">📚 CẦN CỐ GẮNG — Đọc lại giải thích nhé!</div>', unsafe_allow_html=True)
-        msg = "Những lỗi sai đã đánh lừa bạn — đó là bình thường! Khoa học chính là quá trình học từ sai lầm."
+        st.markdown('<div class="badge-wrong" style="display:block;text-align:center;padding:0.8rem">📚 CẦN CỐ GẮNG — Đừng nản chí!</div>', unsafe_allow_html=True)
+        msg = "Những lỗi sai đã đánh lừa bạn — đó là bình thường! Hãy xem lại các khái niệm chưa nắm vững và thử sức lần nữa."
 
     st.markdown(f'<p style="color:#7eb8d4;text-align:center;margin:1rem 0">{msg}</p>', unsafe_allow_html=True)
-
-    # Tổng kết kiến thức
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#3a6a8c;letter-spacing:0.15em">KIẾN THỨC ĐÃ TRẢI QUA</h3>', unsafe_allow_html=True)
+
+    # ==========================================
+    # PHÂN LOẠI KIẾN THỨC DỰA VÀO STUDENT MODEL
+    # ==========================================
+    mastered = []
+    needs_review = []
+    
     for sc in wd["scenarios"]:
-        st.markdown(f"""
-        <div style="display:flex;align-items:center;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid #1a3a5c">
-            <span style="color:#00ff88;font-size:0.9rem">✓</span>
-            <span style="font-size:0.9rem;color:#7eb8d4">{sc['concept']}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        concept = sc['concept']
+        # Lấy điểm mastery (Mặc định khởi tạo là 0.5. Nếu trả lời đúng lên 0.65, sai tụt xuống 0.35)
+        mastery = st.session_state.student_model["concept_mastery"].get(concept, 0.5)
+        
+        # Phân loại: Ngưỡng 0.6 là chuẩn xác để biết học sinh có làm đúng hay không
+        if mastery >= 0.6:
+            mastered.append(concept)
+        else:
+            needs_review.append(concept)
+
+    # 1. Hiển thị nhóm Cần ôn tập (Ưu tiên đập vào mắt trước)
+    if needs_review:
+        st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#ffca28;letter-spacing:0.15em">⚠️ KIẾN THỨC CHƯA NẮM VỮNG (CẦN ÔN LẠI)</h3>', unsafe_allow_html=True)
+        for concept in needs_review:
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid #1a3a5c">
+                <span style="color:#ffca28;font-size:1.1rem">✗</span>
+                <span style="font-size:0.95rem;color:#e8f4ff">{concept}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+    # 2. Hiển thị nhóm Đã nắm vững
+    if mastered:
+        st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#00ff88;letter-spacing:0.15em">✅ KIẾN THỨC ĐÃ NẮM VỮNG</h3>', unsafe_allow_html=True)
+        for concept in mastered:
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid #1a3a5c">
+                <span style="color:#00ff88;font-size:1.1rem">✓</span>
+                <span style="font-size:0.95rem;color:#7eb8d4;opacity:0.8">{concept}</span>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Buttons
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔄  THỬ THẾ GIỚI KHÁC", type="primary", use_container_width=True):
@@ -1053,7 +1109,8 @@ def render_result():
                 st.session_state[k] = defaults[k]
             go("choose")
     with col2:
-        if st.button("↩  CHƠI LẠI THẾ GIỚI NÀY", use_container_width=True):
+        # Nếu chơi lại, giữ nguyên Student Model để Adaptive Learning phát huy tác dụng
+        if st.button("↩  ÔN TẬP LẠI THẾ GIỚI NÀY", use_container_width=True):
             st.session_state.scenario_idx = 0
             st.session_state.user_answer = None
             st.session_state.score = 0
