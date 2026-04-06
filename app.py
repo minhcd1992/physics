@@ -792,7 +792,7 @@ def render_teach_ai():
 
     st.markdown('<div class="step-indicator step-active">// MODULE 3 — ĐÀO SÂU BẢN CHẤT //</div>', unsafe_allow_html=True)
     st.markdown('<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:#00d4ff">Cùng thảo luận sâu hơn</h2>', unsafe_allow_html=True)
-    st.markdown(f'<p style="color:#7eb8d4">Thảo luận để <strong style="color:#e8f4ff">"{scenario["concept"]}"</strong> hiểu sâu hơn những khía cạnh khác, đừng ngại sai</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="color:#7eb8d4">Thảo luận thêm về <strong style="color:#e8f4ff">"{scenario["concept"]}"</strong> để hiểu sâu hơn những khía cạnh khác, đừng ngại sai</p>', unsafe_allow_html=True)
 
     # Hiển thị lịch sử chat
     for msg in st.session_state.ai_chat_history:
