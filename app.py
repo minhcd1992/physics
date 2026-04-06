@@ -117,6 +117,7 @@ p, label, span, div, li, a {
 .world-card.ice::before  { background: linear-gradient(90deg, transparent, #4fc3f7, transparent); }
 .world-card.planet::before { background: linear-gradient(90deg, transparent, #ab47bc, transparent); }
 .world-card.energy::before { background: linear-gradient(90deg, transparent, #ffca28, transparent); }
+.world-card.radiation::before { background: linear-gradient(90deg, transparent, #ff5722, transparent); }
 .world-title {
     font-family: 'Exo 2', sans-serif;
     font-size: 1rem;
@@ -451,6 +452,66 @@ WORLDS = {
                 "explanation": "Động cơ vĩnh cửu vi phạm cả Định luật 1 và 2 Nhiệt động lực học. Dù công nghệ có tiên tiến đến đâu, ma sát và sự phân tán nhiệt năng là không thể tránh khỏi. Bất kỳ máy nào cũng sẽ dần mất năng lượng và cuối cùng dừng lại — đây là giới hạn cơ bản của vũ trụ, không phải của kỹ thuật.",
                 "concept": "Động cơ vĩnh cửu — Định luật Nhiệt động lực học 1 & 2",
                 "ai_context": "Học sinh vừa học về tại sao động cơ vĩnh cửu là bất khả thi. Tình huống sai: 'công nghệ đủ tiên tiến có thể tạo động cơ vĩnh cửu'. Câu trả lời đúng: Sai — động cơ vĩnh cửu vi phạm định luật nhiệt động lực học, là giới hạn của vũ trụ không phải kỹ thuật."
+            }
+        ]
+    },
+    "thermal_radiation": {
+        "name": "Hẻm Núi Bức Xạ",
+        "emoji": "♨️",
+        "subtitle": "Nhiệt & Phát Xạ",
+        "color": "#ff5722",
+        "css_class": "radiation",
+        "badge_bg": "#ff572222",
+        "badge_border": "#ff572255",
+        "description": "Một vùng đất rực đỏ nơi ánh sáng và nhiệt độ chơi trò đánh lừa thị giác. Tại đây, những định luật bức xạ sẽ thay đổi cách bạn nhìn nhận vạn vật.",
+        "scenarios": [
+            {
+                "id": "tr1",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Bức xạ nhiệt chỉ được phát ra từ các vật thể nóng sáng như Mặt Trời, bóng đèn dây tóc hay đống lửa. Một khối băng lạnh ngắt ở Bắc Cực thì hoàn toàn không phát ra bức xạ nhiệt nào cả.",
+                "correct_answer": "Sai",
+                "explanation": "Thực tế, mọi vật thể có nhiệt độ lớn hơn độ không tuyệt đối (0 Kelvin, tương đương -273.15°C) đều liên tục phát ra bức xạ nhiệt. Một khối băng tuy rất lạnh so với cơ thể người, nhưng nhiệt độ của nó vẫn khoảng 273K. Do đó, nó vẫn đang bức xạ nhiệt cường độ lớn (chủ yếu ở vùng tia hồng ngoại mà mắt người không thể nhìn thấy).",
+                "concept": "Bản chất Bức xạ nhiệt",
+                "ai_context": "Học sinh vừa học về việc mọi vật thể trên 0K đều phát ra bức xạ nhiệt hồng ngoại. Tình huống sai là 'vật lạnh như khối băng không bức xạ'. Hãy đặt một câu hỏi vui để học sinh liên hệ thực tế, ví dụ như cách camera hồng ngoại hoạt động."
+            },
+            {
+                "id": "tr2",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Mặc áo màu đen vào mùa hè sẽ làm bạn nóng hơn vì nó hấp thụ bức xạ nhiệt rất mạnh. Do đó, vào ban đêm mùa đông, mặc áo đen cũng sẽ giúp bạn giữ ấm cơ thể tốt hơn so với áo trắng vì nó có khả năng 'nhốt' nhiệt độ lại.",
+                "correct_answer": "Sai",
+                "explanation": "Theo định luật Kirchhoff về bức xạ nhiệt: Một vật hấp thụ bức xạ ở bước sóng nào tốt thì nó cũng PHÁT XẠ (bức xạ) ở bước sóng đó cực kỳ tốt. Chiếc áo đen hấp thụ sức nóng mặt trời rất nhanh, nhưng vào ban đêm, nó cũng bức xạ nhiệt từ cơ thể bạn ra môi trường lạnh lẽo xung quanh nhanh hơn hẳn áo trắng. Kết quả là mặc áo đen ban đêm mùa đông sẽ làm bạn mất nhiệt và lạnh nhanh hơn!",
+                "concept": "Định luật Kirchhoff về Bức xạ nhiệt",
+                "ai_context": "Học sinh vừa học định luật Kirchhoff: vật hấp thụ nhiệt tốt cũng là vật phát xạ nhiệt cực kỳ tốt (áp dụng vào việc áo đen tỏa nhiệt nhanh hơn áo trắng ban đêm). Hãy hỏi học sinh xem nguyên lý này ứng dụng thế nào trong việc sơn màu cho các tấm tản nhiệt trong máy móc."
+            },
+            {
+                "id": "tr3",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Năng lượng bức xạ tỷ lệ thuận với nhiệt độ. Nếu bạn nung một thanh kim loại sao cho nhiệt độ tuyệt đối (Kelvin) của nó tăng lên gấp đôi, thì năng lượng bức xạ nhiệt do nó phát ra cũng sẽ chỉ tăng lên đúng gấp đôi.",
+                "correct_answer": "Sai",
+                "explanation": "Bức xạ nhiệt tuân theo Định luật Stefan-Boltzmann ($P = \\sigma A T^4$). Nghĩa là năng lượng bức xạ tỷ lệ thuận với lũy thừa bậc 4 của nhiệt độ tuyệt đối. Nếu nhiệt độ Kelvin tăng lên gấp đôi ($2T$), công suất bức xạ nhiệt sẽ bùng nổ, tăng lên tới $2^4 = 16$ lần! Sự gia tăng cực kỳ khủng khiếp này là lý do vì sao các lò luyện kim rực sáng chói lòa khi đạt nhiệt độ cao.",
+                "concept": "Định luật Stefan-Boltzmann",
+                "ai_context": "Học sinh vừa học Định luật Stefan-Boltzmann, hiểu được sức mạnh của hàm mũ bậc 4 (T^4). Câu hỏi sai là năng lượng bức xạ chỉ tăng gấp đôi khi nhiệt độ tăng gấp đôi. Hãy đưa ra bình luận về sự tăng trưởng khủng khiếp này."
+            },
+            {
+                "id": "tr4",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Khi nung nóng dần một khối thép, nó sẽ chuyển màu từ sáng đỏ, sang vàng, rồi sang trắng xanh. Hiện tượng này xảy ra là do nhiệt độ càng cao, khối thép tạo ra ánh sáng có bước sóng càng dài.",
+                "correct_answer": "Sai",
+                "explanation": "Nhiệt độ càng cao thì bước sóng cực đại của bức xạ càng NGẮN lại (Định luật Dịch chuyển Wien: $\\lambda_{max} T = b$). Ánh sáng màu đỏ có bước sóng dài (ít năng lượng), trong khi màu xanh có bước sóng ngắn (nhiều năng lượng). Khi khối thép nóng lên, đỉnh phát xạ dịch chuyển từ vùng hồng ngoại sang ánh sáng đỏ (bước sóng dài), rồi cuối cùng tiến về phía xanh dương (bước sóng ngắn).",
+                "concept": "Định luật Dịch chuyển Wien",
+                "ai_context": "Học sinh vừa học Định luật Wien: nhiệt độ tăng thì bước sóng phát xạ ngắn lại (chuyển từ đỏ sang xanh). Hãy đặt câu hỏi để học sinh liên hệ việc này với việc phán đoán nhiệt độ của các ngôi sao trên bầu trời đêm thông qua màu sắc của chúng."
+            },
+            {
+                "id": "tr5",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Hiệu ứng nhà kính xảy ra đơn thuần là do lớp kính (hoặc bầu khí quyển) đóng vai trò như một cái lồng chóp, cản trở không khí nóng bên trong bay ra ngoài, giống hệt như đậy nắp một nồi nước.",
+                "correct_answer": "Sai",
+                "explanation": "Mặc dù nhà kính ngoài đời thực có ngăn dòng đối lưu không khí, nhưng bản chất của 'Hiệu ứng nhà kính' khí hậu lại nằm ở sự Bức xạ chọn lọc. Khí quyển (và kính) gần như trong suốt với bức xạ sóng ngắn (ánh sáng từ Mặt Trời) chiếu xuống. Nhưng khi mặt đất nóng lên, nó lại phát xạ bức xạ nhiệt sóng dài (hồng ngoại). Lúc này, các 'khí nhà kính' chặn đứng sóng dài, hấp thụ và bức xạ ngược lại xuống mặt đất, giữ nhiệt lượng kẹt lại.",
+                "concept": "Bản chất Hiệu ứng Nhà kính (Bức xạ chọn lọc)",
+                "ai_context": "Học sinh vừa học bản chất hiệu ứng nhà kính là sự thấu xạ chọn lọc: cho sóng mặt trời đi qua nhưng chặn sóng hồng ngoại từ mặt đất phát ra. Hãy hỏi học sinh xem hiện tượng giữ nhiệt bức xạ này có lúc nào mang lại lợi ích cho sự sống không, hay chỉ toàn tác hại."
+            },
+            {
+                "id": "tr6",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Không gian vũ trụ sâu thẳm giữa các thiên hà hoàn toàn là môi trường chân không, tĩnh lặng và tối tăm tuyệt đối. Do đó, nhiệt độ bức xạ ở những vùng trống rỗng này là chính xác 0 Kelvin.",
+                "correct_answer": "Sai",
+                "explanation": "Không gian không bao giờ chạm mức 0K. Khi hướng các thiết bị quan sát thiên văn ra những khoảng không tối tăm nhất, các nhà khoa học vẫn đo được một phông bức xạ nhiệt tàn dư từ Vụ Nổ Lớn (Big Bang), gọi là Bức xạ Nền Vi sóng Vũ trụ (CMB). Bức xạ này hoạt động như một vật đen lý tưởng có nhiệt độ khoảng 2.7 Kelvin, lấp đầy mọi ngóc ngách của vũ trụ.",
+                "concept": "Bức xạ Nền Vi sóng Vũ trụ (CMB)",
+                "ai_context": "Học sinh vừa học về CMB (tàn dư Big Bang, nhiệt độ không gian ~2.7K chứ không phải 0K). Hãy hỏi học sinh xem việc phát hiện ra 'tiếng vọng bức xạ' cực kỳ nhỏ nhoi này có ý nghĩa to lớn gì đối với hiểu biết của con người về vũ trụ."
             }
         ]
     }
