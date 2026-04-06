@@ -6,16 +6,15 @@ import time
 # CẤU HÌNH TRANG
 # ==========================================
 st.set_page_config(
-    page_title="Physics Glitch",
-    page_icon="⚡",
+    page_title="Physics Glitch - Khúc Xạ Ánh Sáng",
+    page_icon="🌈",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
 # ==========================================
-# CSS TOÀN CỤC - GIAO DIỆN "GLITCH / SCI-FI"
+# CSS TOÀN CỤC - GIAO DIỆN "GLITCH / SCI-FI" & ANIMATION
 # ==========================================
-# Đã đổi sang font Exo 2 (Tiêu đề) và Be Vietnam Pro (Nội dung) để hỗ trợ Tiếng Việt hoàn hảo
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;600&family=Exo+2:wght@400;700;900&display=swap');
@@ -114,10 +113,9 @@ p, label, span, div, li, a {
     top: 0; left: 0; right: 0;
     height: 2px;
 }
-.world-card.ice::before  { background: linear-gradient(90deg, transparent, #4fc3f7, transparent); }
-.world-card.planet::before { background: linear-gradient(90deg, transparent, #ab47bc, transparent); }
-.world-card.energy::before { background: linear-gradient(90deg, transparent, #ffca28, transparent); }
-.world-card.radiation::before { background: linear-gradient(90deg, transparent, #ff5722, transparent); }
+/* Thêm màu viền cho thế giới khúc xạ */
+.world-card.refraction::before { background: linear-gradient(90deg, transparent, #00d4ff, transparent); }
+
 .world-title {
     font-family: 'Exo 2', sans-serif;
     font-size: 1rem;
@@ -340,178 +338,240 @@ button[kind="primary"] {
     border: 1px solid #1a3a5c !important;
     border-radius: 8px !important;
 }
+
+/* ---- Animation SVG Mô phỏng ---- */
+@keyframes ray-flow {
+  to { stroke-dashoffset: -20; }
+}
+.ray {
+  stroke-dasharray: 10, 5;
+  animation: ray-flow 1s linear infinite;
+}
+.pulse {
+  animation: opacity-pulse 2s ease-in-out infinite;
+}
+@keyframes opacity-pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# DỮ LIỆU NỘI DUNG
+# HELPERS & MÔ PHỎNG SVG
+# ==========================================
+def progress_bar(value, max_val):
+    pct = int((value / max_val) * 100)
+    st.markdown(f"""
+    <div class="prog-wrap">
+        <div class="prog-fill" style="width:{pct}%"></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def detect_misconception(user_answer, scenario):
+    text = scenario["statement"].lower()
+    # Phân tích dựa trên các từ khóa trong tình huống
+    if "truyền thẳng" in text:
+        return "Lỗi tư duy: Tin rằng ánh sáng không bao giờ bị bẻ cong (bỏ qua sự thay đổi môi trường)."
+    if "vị trí thực tế" in text:
+        return "Lỗi tư duy: Áp đặt trực giác đời thường, nhầm lẫn giữa ảnh ảo do khúc xạ tạo ra và vật thật."
+    if "góc nghiêng lớn" in text:
+        return "Lỗi tư duy: Chưa biết về hiện tượng Phản xạ toàn phần và góc tới hạn."
+    if "tăng tốc độ" in text:
+        return "Lỗi tư duy: Hiểu ngược mối quan hệ giữa chiết suất (n) và vận tốc truyền sáng (v)."
+    if "nhuộm màu" in text:
+        return "Lỗi tư duy: Hiểu sai bản chất ánh sáng trắng (cho rằng nó là đơn sắc)."
+    if "chặn bớt ánh sáng" in text:
+        return "Lỗi tư duy: Hiểu sai cơ chế tạo ảnh của thấu kính hội tụ (bỏ qua sự giao hội tia sáng)."
+    
+    return f"Lỗi tư duy: Nhầm lẫn cơ bản về {scenario['concept']}."
+
+def render_svg_simulation(svg_type):
+    """Hàm vẽ các mô phỏng hiện tượng khúc xạ bằng HTML/SVG"""
+    
+    if svg_type == "basic":
+        # Khúc xạ cơ bản (Không khí -> Nước)
+        svg = """
+        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
+            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
+              <rect x="0" y="100" width="400" height="100" fill="#00d4ff33" />
+              <line x1="0" y1="100" x2="400" y2="100" stroke="#00d4ff" stroke-width="2" />
+              <line x1="200" y1="20" x2="200" y2="180" stroke="#ffffff55" stroke-dasharray="5,5" />
+              <line x1="50" y1="20" x2="200" y2="100" stroke="#ffca28" stroke-width="3" class="ray" />
+              <line x1="200" y1="100" x2="350" y2="180" stroke="#ffffff33" stroke-width="1" stroke-dasharray="2,2" />
+              <line x1="200" y1="100" x2="260" y2="180" stroke="#ffca28" stroke-width="3" class="ray" />
+              <text x="10" y="90" fill="#ffffff" font-size="12" font-family="sans-serif">KHÔNG KHÍ (n1)</text>
+              <text x="10" y="120" fill="#00d4ff" font-size="12" font-family="sans-serif">NƯỚC (n2 > n1)</text>
+              <path d="M 180 89 A 20 20 0 0 1 200 80" fill="none" stroke="#ffca28" stroke-width="1"/>
+              <path d="M 200 120 A 20 20 0 0 1 215 120" fill="none" stroke="#ffca28" stroke-width="1"/>
+            </svg>
+            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Tia sáng bị bẻ cong về phía pháp tuyến khi đi vào môi trường đặc hơn.</div>
+        </div>
+        """
+    elif svg_type == "depth":
+        # Độ sâu ảo
+        svg = """
+        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
+            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
+              <rect x="0" y="80" width="400" height="120" fill="#00d4ff33" />
+              <line x1="0" y1="80" x2="400" y2="80" stroke="#00d4ff" stroke-width="2" />
+              <circle cx="200" cy="180" r="10" fill="#ffca28" />
+              <text x="220" y="185" fill="#ffffff" font-size="12" font-family="sans-serif">Vị trí thật</text>
+              <circle cx="160" cy="120" r="10" fill="#ffca2855" class="pulse"/>
+              <text x="180" y="125" fill="#00d4ff" font-size="12" font-family="sans-serif">Vị trí ảo (Mắt thấy)</text>
+              <line x1="200" y1="180" x2="140" y2="80" stroke="#ffffff88" stroke-width="2" />
+              <line x1="140" y1="80" x2="100" y2="20" stroke="#ffffff" stroke-width="2" class="ray" />
+              <line x1="140" y1="80" x2="160" y2="120" stroke="#00d4ff88" stroke-dasharray="4,4" />
+              <path d="M 80 10 Q 100 -5 120 10 Q 100 25 80 10 Z" fill="none" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="100" cy="10" r="4" fill="#ffffff" />
+            </svg>
+            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Mắt nhìn theo đường thẳng kéo dài của tia khúc xạ tạo ra ảnh ảo.</div>
+        </div>
+        """
+    elif svg_type == "total_reflection":
+        # Phản xạ toàn phần
+        svg = """
+        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
+            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
+              <rect x="0" y="100" width="400" height="100" fill="#00d4ff33" />
+              <line x1="0" y1="100" x2="400" y2="100" stroke="#00d4ff" stroke-width="2" />
+              <line x1="200" y1="20" x2="200" y2="180" stroke="#ffffff55" stroke-dasharray="5,5" />
+              <circle cx="200" cy="180" r="6" fill="#ffca28" class="pulse"/>
+              
+              <line x1="200" y1="180" x2="180" y2="100" stroke="#ffffff55" stroke-width="1" />
+              <line x1="180" y1="100" x2="150" y2="20" stroke="#ffffff55" stroke-width="1" />
+              
+              <line x1="200" y1="180" x2="250" y2="100" stroke="#ffffff88" stroke-width="2" />
+              <line x1="250" y1="100" x2="380" y2="100" stroke="#ffffff88" stroke-width="2" />
+              
+              <line x1="200" y1="180" x2="280" y2="100" stroke="#ff4b4b" stroke-width="3" class="ray" />
+              <line x1="280" y1="100" x2="360" y2="180" stroke="#ff4b4b" stroke-width="3" class="ray" />
+              <text x="290" y="140" fill="#ff4b4b" font-size="12" font-family="sans-serif">Phản xạ toàn phần</text>
+            </svg>
+            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Khi góc tới quá lớn, tia sáng không thể thoát ra ngoài môi trường.</div>
+        </div>
+        """
+    elif svg_type == "prism":
+        # Tán sắc qua lăng kính
+        svg = """
+        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
+            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
+              <polygon points="200,40 120,160 280,160" fill="#ffffff11" stroke="#ffffff" stroke-width="2" />
+              <line x1="50" y1="130" x2="160" y2="100" stroke="#ffffff" stroke-width="4" class="ray" />
+              <text x="50" y="120" fill="#ffffff" font-size="10" font-family="sans-serif">Ánh sáng trắng</text>
+              
+              <line x1="160" y1="100" x2="240" y2="100" stroke="#ff4b4b" stroke-width="2" />
+              <line x1="160" y1="100" x2="250" y2="115" stroke="#00ff88" stroke-width="2" />
+              <line x1="160" y1="100" x2="260" y2="130" stroke="#9900ff" stroke-width="2" />
+              
+              <line x1="240" y1="100" x2="350" y2="60" stroke="#ff4b4b" stroke-width="2" class="ray"/>
+              <line x1="250" y1="115" x2="350" y2="100" stroke="#00ff88" stroke-width="2" class="ray"/>
+              <line x1="260" y1="130" x2="350" y2="140" stroke="#9900ff" stroke-width="2" class="ray"/>
+              
+              <text x="360" y="65" fill="#ff4b4b" font-size="10" font-family="sans-serif">ĐỎ (Ít lệch)</text>
+              <text x="360" y="145" fill="#9900ff" font-size="10" font-family="sans-serif">TÍM (Lệch nhiều)</text>
+            </svg>
+            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Lăng kính bẻ cong các tia màu khác nhau với mức độ khác nhau.</div>
+        </div>
+        """
+    elif svg_type == "lens":
+        # Thấu kính thiên văn
+        svg = """
+        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
+            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
+              <line x1="0" y1="100" x2="400" y2="100" stroke="#ffffff55" stroke-dasharray="5,5" />
+              <path d="M 200 40 Q 220 100 200 160 Q 180 100 200 40 Z" fill="#00d4ff33" stroke="#00d4ff" stroke-width="2" />
+              
+              <line x1="50" y1="60" x2="195" y2="60" stroke="#ffca28" stroke-width="2" class="ray" />
+              <line x1="50" y1="100" x2="200" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
+              <line x1="50" y1="140" x2="195" y2="140" stroke="#ffca28" stroke-width="2" class="ray" />
+              
+              <line x1="195" y1="60" x2="300" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
+              <line x1="200" y1="100" x2="350" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
+              <line x1="195" y1="140" x2="300" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
+              
+              <circle cx="300" cy="100" r="4" fill="#ff4b4b" class="pulse"/>
+              <text x="290" y="85" fill="#ff4b4b" font-size="12" font-family="sans-serif">Tiêu điểm</text>
+            </svg>
+            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Vật kính hội tụ các tia sáng song song để tạo ảnh thật.</div>
+        </div>
+        """
+    else:
+        # Trống (Dành cho câu hỏi lý thuyết ko cần hình)
+        svg = ""
+        
+    if svg:
+        st.components.v1.html(svg, height=260)
+
+
+# ==========================================
+# DỮ LIỆU NỘI DUNG (CHỈ GIỮ LẠI THẾ GIỚI KHÚC XẠ)
 # ==========================================
 WORLDS = {
-    "no_friction": {
-        "name": "Thế Giới Trơn Trượt",
-        "emoji": "🧊",
-        "subtitle": "Không Ma Sát",
-        "color": "#4fc3f7",
-        "css_class": "ice",
-        "badge_bg": "#4fc3f722",
-        "badge_border": "#4fc3f755",
-        "description": "Một thế giới nơi mọi bề mặt nhẵn bóng hoàn hảo. Không có gì ngừng lại — mãi mãi.",
+    "refraction_world": {
+        "name": "Đại Dương Ảo Ảnh",
+        "emoji": "🌊",
+        "subtitle": "Khúc Xạ Ánh Sáng",
+        "color": "#00d4ff",
+        "css_class": "refraction",
+        "badge_bg": "#00d4ff22",
+        "badge_border": "#00d4ff55",
+        "description": "Nơi ánh sáng bị bẻ cong khi bước qua ranh giới giữa các môi trường. Hãy cẩn thận, mắt bạn sẽ đánh lừa bạn!",
         "scenarios": [
             {
-                "id": "nf1",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Một chiếc xe đang chạy sẽ tự động dừng lại hoàn toàn, ngay cả khi không có bất kỳ lực ma sát hay lực cản không khí nào tác dụng lên nó.",
+                "id": "re1",
+                "concept": "Sự bẻ cong tia sáng",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Một tia sáng khi đi từ không khí vào mặt nước phẳng lặng sẽ luôn giữ nguyên đường thẳng ban đầu vì ánh sáng có tính chất truyền thẳng tuyệt đối trong mọi tình huống.",
                 "correct_answer": "Sai",
-                "explanation": "Theo Định luật 1 Newton (Quán tính), một vật đang chuyển động sẽ tiếp tục chuyển động thẳng đều vô tận trừ khi có ngoại lực tác dụng. Không có ma sát, không có lực cản — chiếc xe sẽ lướt đi mãi mãi không bao giờ dừng.",
-                "concept": "Định luật 1 Newton — Quán tính",
-                "ai_context": "Học sinh vừa học về Định luật 1 Newton (Quán tính). Tình huống sai: 'xe tự dừng khi không có ma sát'. Câu trả lời đúng là: Sai — không có lực tác dụng thì vật chuyển động mãi mãi."
+                "explanation": "Ánh sáng chỉ truyền thẳng trong môi trường ĐỒNG TÍNH. Khi đi qua mặt phân cách giữa hai môi trường có chiết suất khác nhau (như không khí và nước), tốc độ ánh sáng thay đổi khiến tia sáng bị bẻ cong. Hiện tượng này gọi là khúc xạ.",
+                "ai_context": "Học sinh hiểu sai về tính truyền thẳng của ánh sáng khi qua mặt phân cách. Concept: Khúc xạ là sự thay đổi phương truyền do thay đổi tốc độ ánh sáng giữa 2 môi trường.",
+                "svg_type": "basic"
             },
             {
-                "id": "nf2",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Nếu ném một quả bóng trong môi trường hoàn toàn không có ma sát và không có trọng lực, quả bóng sẽ bay chậm dần rồi cong xuống và dừng lại.",
+                "id": "re2",
+                "concept": "Độ sâu ảo (Apparent Depth)",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Khi bạn nhìn một đồng xu dưới đáy hồ bơi, vị trí bạn nhìn thấy chính là vị trí thực tế của đồng xu đó. Mắt con người luôn nhìn thấy vật thể đúng nơi chúng tọa lạc.",
                 "correct_answer": "Sai",
-                "explanation": "Không có trọng lực kéo xuống, không có ma sát làm chậm — quả bóng sẽ di chuyển thẳng, đều, mãi mãi. Đây chính là nguyên lý mà các vệ tinh nhân tạo và phi thuyền trong không gian hoạt động.",
-                "concept": "Chuyển động thẳng đều — Quán tính trong không gian",
-                "ai_context": "Học sinh vừa học về chuyển động trong môi trường không có lực cản và trọng lực. Tình huống sai: 'bóng sẽ cong xuống và dừng lại'. Câu trả lời đúng: Sai — không có lực nào tác dụng thì vật đi thẳng đều mãi."
+                "explanation": "Do hiện tượng khúc xạ, các tia sáng từ đồng xu dưới nước khi đi ra ngoài không khí sẽ bị lệch xa pháp tuyến hơn. Mắt người có thói quen nội suy ngược tia sáng theo đường thẳng, khiến chúng ta thấy một 'ảnh ảo' của đồng xu nằm nông hơn vị trí thật sự của nó dưới đáy hồ.",
+                "ai_context": "Học sinh nhầm lẫn giữa ảnh ảo và vật thật dưới nước. Concept: Ảnh ảo nằm cao hơn (nông hơn) vật thật khi nhìn từ môi trường chiết suất thấp vào môi trường chiết suất cao.",
+                "svg_type": "depth"
             },
             {
-                "id": "nf3",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Khi trượt băng, nếu bạn đẩy mạnh hơn, bạn sẽ đạt tốc độ cao hơn. Điều này chứng minh rằng lực lớn hơn luôn tạo ra vận tốc lớn hơn, bất kể khối lượng.",
+                "id": "re3",
+                "concept": "Phản xạ toàn phần",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Một bóng đèn đặt dưới đáy bể bơi có thể chiếu tia sáng thoát ra ngoài không khí theo MỌI HƯỚNG, bất kể bạn chiếu góc nghiêng gắt đến mức nào đi chăng nữa.",
                 "correct_answer": "Sai",
-                "explanation": "Lực lớn hơn tạo ra gia tốc lớn hơn — không phải vận tốc trực tiếp. Theo F = ma, cùng một lực tác dụng lên vật nặng gấp đôi sẽ cho gia tốc bằng một nửa. Vận tốc phụ thuộc vào cả lực lẫn khối lượng của vật.",
-                "concept": "Định luật 2 Newton — F = ma",
-                "ai_context": "Học sinh vừa học về Định luật 2 Newton F=ma. Tình huống sai: 'lực lớn hơn luôn tạo vận tốc lớn hơn bất kể khối lượng'. Câu trả lời đúng: Sai — lực lớn tạo gia tốc lớn, nhưng vận tốc còn phụ thuộc khối lượng."
-            }
-        ]
-    },
-    "high_gravity": {
-        "name": "Hành Tinh Nặng Trĩu",
-        "emoji": "🪐",
-        "subtitle": "Trọng Lực Cực Đại",
-        "color": "#ab47bc",
-        "css_class": "planet",
-        "badge_bg": "#ab47bc22",
-        "badge_border": "#ab47bc55",
-        "description": "Một hành tinh khổng lồ nơi trọng lực kéo mọi thứ xuống với sức mạnh kinh khủng.",
-        "scenarios": [
-            {
-                "id": "hg1",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Thả rơi tự do một quả bóng bowling nặng 5kg và một chiếc lông vũ 5g trong buồng chân không hoàn toàn trên hành tinh này — quả bóng bowling sẽ chạm đất nhanh hơn nhiều.",
-                "correct_answer": "Sai",
-                "explanation": "Trong chân không, mọi vật đều rơi với cùng gia tốc g bất kể khối lượng. Galileo đã chứng minh điều này từ thế kỷ 17. Trọng lực lớn hơn chỉ làm cả hai rơi nhanh hơn so với Trái Đất, nhưng chúng vẫn chạm đất đồng thời.",
-                "concept": "Rơi tự do — Galileo & gia tốc trọng trường",
-                "ai_context": "Học sinh vừa học về rơi tự do và gia tốc trọng trường. Tình huống sai: 'vật nặng hơn rơi nhanh hơn trong chân không'. Câu trả lời đúng: Sai — trong chân không mọi vật rơi cùng gia tốc g, bất kể khối lượng."
+                "explanation": "Khi tia sáng truyền từ môi trường chiết suất LỚN (nước) sang môi trường chiết suất NHỎ (không khí), nếu góc tới vượt quá một giá trị gọi là 'góc tới hạn', tia sáng sẽ KHÔNG THỂ thoát ra ngoài mà bị phản xạ ngược trở lại hoàn toàn vào trong nước. Hiện tượng này gọi là Phản xạ toàn phần.",
+                "ai_context": "Học sinh chưa biết về góc tới hạn và hiện tượng phản xạ toàn phần. Concept: Phản xạ toàn phần chỉ xảy ra khi ánh sáng đi từ môi trường đặc sang loãng và góc tới vượt ngưỡng.",
+                "svg_type": "total_reflection"
             },
             {
-                "id": "hg2",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Trọng lực ở hành tinh này mạnh gấp 10 lần Trái Đất. Do đó, khối lượng cơ thể bạn sẽ tăng gấp 10 lần khi đứng trên hành tinh đó.",
+                "id": "re4",
+                "concept": "Chiết suất và Vận tốc",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Chiết suất của kim cương rất lớn (n ≈ 2.4). Điều này có nghĩa là ánh sáng khi bay vào bên trong viên kim cương sẽ tăng tốc và di chuyển nhanh gấp 2.4 lần so với khi bay trong chân không.",
                 "correct_answer": "Sai",
-                "explanation": "Khối lượng là lượng vật chất tạo nên một vật — nó không bao giờ thay đổi dù ở đâu trong vũ trụ. Thứ thay đổi là TRỌNG LƯỢNG (lực hấp dẫn tác dụng lên khối lượng). Trên hành tinh đó, trọng lượng bạn tăng 10 lần, nhưng khối lượng vẫn y nguyên.",
-                "concept": "Phân biệt Khối lượng vs Trọng lượng",
-                "ai_context": "Học sinh vừa học về sự khác biệt giữa khối lượng và trọng lượng. Tình huống sai: 'trọng lực lớn làm khối lượng tăng'. Câu trả lời đúng: Sai — khối lượng không đổi, chỉ trọng lượng (lực) mới thay đổi theo g."
+                "explanation": "Ngược lại hoàn toàn! Chiết suất của một môi trường tỷ lệ NGHỊCH với tốc độ ánh sáng trong môi trường đó ($n = c/v$). Chiết suất càng lớn, ánh sáng di chuyển càng chậm. Trong kim cương, ánh sáng bị 'hãm' lại chỉ còn khoảng 124.000 km/s (thay vì 300.000 km/s). Sự chậm trễ này khiến nó bị khúc xạ cực mạnh, tạo ra vẻ lấp lánh.",
+                "ai_context": "Học sinh nhầm lẫn mối quan hệ giữa chiết suất và vận tốc ánh sáng. Concept: Môi trường có chiết suất n càng lớn thì vận tốc truyền sáng v càng nhỏ.",
+                "svg_type": "none"
             },
             {
-                "id": "hg3",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Nếu bạn nhảy lên trên hành tinh có trọng lực gấp 10 lần, bạn sẽ chỉ lên cao bằng 1/10 so với trên Trái Đất vì trọng lực lớn hơn kéo bạn xuống nhanh hơn.",
+                "id": "re5",
+                "concept": "Sự Tán sắc ánh sáng",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Ánh sáng trắng từ mặt trời là một màu đơn sắc. Khi đi qua một lăng kính thủy tinh, chất liệu thủy tinh đặc biệt của lăng kính đã tự động nhuộm màu cho tia sáng để tạo ra bảy sắc cầu vồng.",
                 "correct_answer": "Sai",
-                "explanation": "Thực ra bạn lên cao bằng 1/10 là đúng về kết quả nhưng sai về lý giải. Không chỉ trọng lực kéo xuống nhanh hơn — chính trọng lực lớn hơn còn làm bạn khó nhảy lên ngay từ đầu (chân phải đẩy mạnh hơn nhiều để nâng cơ thể nặng hơn gấp 10 lần). Cả hai chiều đều bị ảnh hưởng.",
-                "concept": "Chuyển động ném — Gia tốc trọng trường",
-                "ai_context": "Học sinh vừa học về chuyển động ném thẳng đứng dưới tác dụng của trọng lực. Tình huống sai: 'chỉ chiều xuống bị ảnh hưởng bởi trọng lực lớn hơn'. Câu trả lời đúng: Sai — cả chiều lên (lực đẩy cần thiết) và chiều xuống (gia tốc rơi) đều bị ảnh hưởng."
-            }
-        ]
-    },
-    "energy_loss": {
-        "name": "Hư Vô Năng Lượng",
-        "emoji": "⚡",
-        "subtitle": "Không Bảo Toàn",
-        "color": "#ffca28",
-        "css_class": "energy",
-        "badge_bg": "#ffca2822",
-        "badge_border": "#ffca2855",
-        "description": "Một thế giới hỗn loạn nơi năng lượng tự sinh ra và biến mất — hay có vẻ vậy.",
-        "scenarios": [
-            {
-                "id": "el1",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Một quả bóng cao su có độ nảy hoàn hảo có thể nảy lên cao hơn một chút so với vị trí thả ban đầu, nhờ 'tích trữ thêm năng lượng' từ mặt đất khi va chạm.",
-                "correct_answer": "Sai",
-                "explanation": "Định luật Bảo toàn Năng lượng là tuyệt đối: năng lượng không tự sinh ra từ hư vô. Mỗi lần nảy, quả bóng luôn mất một phần năng lượng dưới dạng nhiệt và âm thanh. Không có vật liệu nào nảy cao hơn điểm thả — đó là điều vật lý không cho phép.",
-                "concept": "Định luật Bảo toàn Năng lượng",
-                "ai_context": "Học sinh vừa học về Định luật Bảo toàn Năng lượng. Tình huống sai: 'bóng có thể nảy cao hơn điểm thả nhờ tích năng lượng từ mặt đất'. Câu trả lời đúng: Sai — năng lượng không thể tự sinh ra, mỗi lần nảy đều mất năng lượng."
+                "explanation": "Lăng kính không tự nhuộm màu. Bản thân ánh sáng trắng đã là hỗn hợp của vô số dải màu. Vì mỗi màu có một chiết suất khác nhau đối với thủy tinh (màu tím bị bẻ cong nhiều nhất, màu đỏ ít nhất), lăng kính chỉ làm nhiệm vụ 'tách' các tia màu vốn đã có sẵn này ra thành các góc khác nhau, gọi là hiện tượng tán sắc.",
+                "ai_context": "Học sinh hiểu sai bản chất ánh sáng trắng. Concept: Tán sắc là do chiết suất của môi trường phụ thuộc vào màu sắc (bước sóng) của ánh sáng.",
+                "svg_type": "prism"
             },
             {
-                "id": "el2",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Một chiếc quạt điện khi cắm điện sẽ chuyển hóa 100% điện năng hoàn toàn thành động năng (gió), không sinh ra bất kỳ dạng năng lượng nào khác.",
+                "id": "re6",
+                "concept": "Thấu kính thiên văn",
+                "statement": "🔴 TÌNH HUỐNG LỖI: Để kính thiên văn có thể phóng đại những hành tinh xa xôi, vật kính (thấu kính ở đầu kính) đơn thuần là một tấm kính phẳng có đục một lỗ tròn nhỏ để giới hạn lượng ánh sáng đi vào mắt.",
                 "correct_answer": "Sai",
-                "explanation": "Không có cỗ máy nào đạt hiệu suất 100% — đây là hệ quả trực tiếp của Định luật 2 Nhiệt động lực học. Điện năng được chuyển thành động năng quay cánh quạt, nhưng luôn có một lượng đáng kể 'thất thoát' thành nhiệt năng do ma sát trong ổ trục và điện trở trong dây đồng.",
-                "concept": "Hiệu suất máy móc — Nhiệt động lực học",
-                "ai_context": "Học sinh vừa học về hiệu suất chuyển hóa năng lượng và định luật nhiệt động lực học. Tình huống sai: 'quạt điện chuyển 100% điện năng thành động năng'. Câu trả lời đúng: Sai — không máy nào đạt 100% hiệu suất, luôn có thất thoát nhiệt."
-            },
-            {
-                "id": "el3",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Nếu bạn xây dựng một cỗ máy đủ tinh vi và chính xác, cuối cùng bạn có thể tạo ra 'động cơ vĩnh cửu' — một máy chạy mãi mãi mà không cần thêm năng lượng từ bên ngoài.",
-                "correct_answer": "Sai",
-                "explanation": "Động cơ vĩnh cửu vi phạm cả Định luật 1 và 2 Nhiệt động lực học. Dù công nghệ có tiên tiến đến đâu, ma sát và sự phân tán nhiệt năng là không thể tránh khỏi. Bất kỳ máy nào cũng sẽ dần mất năng lượng và cuối cùng dừng lại — đây là giới hạn cơ bản của vũ trụ, không phải của kỹ thuật.",
-                "concept": "Động cơ vĩnh cửu — Định luật Nhiệt động lực học 1 & 2",
-                "ai_context": "Học sinh vừa học về tại sao động cơ vĩnh cửu là bất khả thi. Tình huống sai: 'công nghệ đủ tiên tiến có thể tạo động cơ vĩnh cửu'. Câu trả lời đúng: Sai — động cơ vĩnh cửu vi phạm định luật nhiệt động lực học, là giới hạn của vũ trụ không phải kỹ thuật."
-            }
-        ]
-    },
-    "thermal_radiation": {
-        "name": "Hẻm Núi Bức Xạ",
-        "emoji": "♨️",
-        "subtitle": "Nhiệt & Phát Xạ",
-        "color": "#ff5722",
-        "css_class": "radiation",
-        "badge_bg": "#ff572222",
-        "badge_border": "#ff572255",
-        "description": "Một vùng đất rực đỏ nơi ánh sáng và nhiệt độ chơi trò đánh lừa thị giác. Tại đây, những định luật bức xạ sẽ thay đổi cách bạn nhìn nhận vạn vật.",
-        "scenarios": [
-            {
-                "id": "tr1",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Bức xạ nhiệt chỉ được phát ra từ các vật thể nóng sáng như Mặt Trời, bóng đèn dây tóc hay đống lửa. Một khối băng lạnh ngắt ở Bắc Cực thì hoàn toàn không phát ra bức xạ nhiệt nào cả.",
-                "correct_answer": "Sai",
-                "explanation": "Thực tế, mọi vật thể có nhiệt độ lớn hơn độ không tuyệt đối (0 Kelvin, tương đương -273.15°C) đều liên tục phát ra bức xạ nhiệt. Một khối băng tuy rất lạnh so với cơ thể người, nhưng nhiệt độ của nó vẫn khoảng 273K. Do đó, nó vẫn đang bức xạ nhiệt cường độ lớn (chủ yếu ở vùng tia hồng ngoại mà mắt người không thể nhìn thấy).",
-                "concept": "Bản chất Bức xạ nhiệt",
-                "ai_context": "Học sinh vừa học về việc mọi vật thể trên 0K đều phát ra bức xạ nhiệt hồng ngoại. Tình huống sai là 'vật lạnh như khối băng không bức xạ'. Hãy đặt một câu hỏi vui để học sinh liên hệ thực tế, ví dụ như cách camera hồng ngoại hoạt động."
-            },
-            {
-                "id": "tr2",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Mặc áo màu đen vào mùa hè sẽ làm bạn nóng hơn vì nó hấp thụ bức xạ nhiệt rất mạnh. Do đó, vào ban đêm mùa đông, mặc áo đen cũng sẽ giúp bạn giữ ấm cơ thể tốt hơn so với áo trắng vì nó có khả năng 'nhốt' nhiệt độ lại.",
-                "correct_answer": "Sai",
-                "explanation": "Theo định luật Kirchhoff về bức xạ nhiệt: Một vật hấp thụ bức xạ ở bước sóng nào tốt thì nó cũng PHÁT XẠ (bức xạ) ở bước sóng đó cực kỳ tốt. Chiếc áo đen hấp thụ sức nóng mặt trời rất nhanh, nhưng vào ban đêm, nó cũng bức xạ nhiệt từ cơ thể bạn ra môi trường lạnh lẽo xung quanh nhanh hơn hẳn áo trắng. Kết quả là mặc áo đen ban đêm mùa đông sẽ làm bạn mất nhiệt và lạnh nhanh hơn!",
-                "concept": "Định luật Kirchhoff về Bức xạ nhiệt",
-                "ai_context": "Học sinh vừa học định luật Kirchhoff: vật hấp thụ nhiệt tốt cũng là vật phát xạ nhiệt cực kỳ tốt (áp dụng vào việc áo đen tỏa nhiệt nhanh hơn áo trắng ban đêm). Hãy hỏi học sinh xem nguyên lý này ứng dụng thế nào trong việc sơn màu cho các tấm tản nhiệt trong máy móc."
-            },
-            {
-                "id": "tr3",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Năng lượng bức xạ tỷ lệ thuận với nhiệt độ. Nếu bạn nung một thanh kim loại sao cho nhiệt độ tuyệt đối (Kelvin) của nó tăng lên gấp đôi, thì năng lượng bức xạ nhiệt do nó phát ra cũng sẽ chỉ tăng lên đúng gấp đôi.",
-                "correct_answer": "Sai",
-                "explanation": "Bức xạ nhiệt tuân theo Định luật Stefan-Boltzmann ($P = \\sigma A T^4$). Nghĩa là năng lượng bức xạ tỷ lệ thuận với lũy thừa bậc 4 của nhiệt độ tuyệt đối. Nếu nhiệt độ Kelvin tăng lên gấp đôi ($2T$), công suất bức xạ nhiệt sẽ bùng nổ, tăng lên tới $2^4 = 16$ lần! Sự gia tăng cực kỳ khủng khiếp này là lý do vì sao các lò luyện kim rực sáng chói lòa khi đạt nhiệt độ cao.",
-                "concept": "Định luật Stefan-Boltzmann",
-                "ai_context": "Học sinh vừa học Định luật Stefan-Boltzmann, hiểu được sức mạnh của hàm mũ bậc 4 (T^4). Câu hỏi sai là năng lượng bức xạ chỉ tăng gấp đôi khi nhiệt độ tăng gấp đôi. Hãy đưa ra bình luận về sự tăng trưởng khủng khiếp này."
-            },
-            {
-                "id": "tr4",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Khi nung nóng dần một khối thép, nó sẽ chuyển màu từ sáng đỏ, sang vàng, rồi sang trắng xanh. Hiện tượng này xảy ra là do nhiệt độ càng cao, khối thép tạo ra ánh sáng có bước sóng càng dài.",
-                "correct_answer": "Sai",
-                "explanation": "Nhiệt độ càng cao thì bước sóng cực đại của bức xạ càng NGẮN lại (Định luật Dịch chuyển Wien: $\\lambda_{max} T = b$). Ánh sáng màu đỏ có bước sóng dài (ít năng lượng), trong khi màu xanh có bước sóng ngắn (nhiều năng lượng). Khi khối thép nóng lên, đỉnh phát xạ dịch chuyển từ vùng hồng ngoại sang ánh sáng đỏ (bước sóng dài), rồi cuối cùng tiến về phía xanh dương (bước sóng ngắn).",
-                "concept": "Định luật Dịch chuyển Wien",
-                "ai_context": "Học sinh vừa học Định luật Wien: nhiệt độ tăng thì bước sóng phát xạ ngắn lại (chuyển từ đỏ sang xanh). Hãy đặt câu hỏi để học sinh liên hệ việc này với việc phán đoán nhiệt độ của các ngôi sao trên bầu trời đêm thông qua màu sắc của chúng."
-            },
-            {
-                "id": "tr5",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Hiệu ứng nhà kính xảy ra đơn thuần là do lớp kính (hoặc bầu khí quyển) đóng vai trò như một cái lồng chóp, cản trở không khí nóng bên trong bay ra ngoài, giống hệt như đậy nắp một nồi nước.",
-                "correct_answer": "Sai",
-                "explanation": "Mặc dù nhà kính ngoài đời thực có ngăn dòng đối lưu không khí, nhưng bản chất của 'Hiệu ứng nhà kính' khí hậu lại nằm ở sự Bức xạ chọn lọc. Khí quyển (và kính) gần như trong suốt với bức xạ sóng ngắn (ánh sáng từ Mặt Trời) chiếu xuống. Nhưng khi mặt đất nóng lên, nó lại phát xạ bức xạ nhiệt sóng dài (hồng ngoại). Lúc này, các 'khí nhà kính' chặn đứng sóng dài, hấp thụ và bức xạ ngược lại xuống mặt đất, giữ nhiệt lượng kẹt lại.",
-                "concept": "Bản chất Hiệu ứng Nhà kính (Bức xạ chọn lọc)",
-                "ai_context": "Học sinh vừa học bản chất hiệu ứng nhà kính là sự thấu xạ chọn lọc: cho sóng mặt trời đi qua nhưng chặn sóng hồng ngoại từ mặt đất phát ra. Hãy hỏi học sinh xem hiện tượng giữ nhiệt bức xạ này có lúc nào mang lại lợi ích cho sự sống không, hay chỉ toàn tác hại."
-            },
-            {
-                "id": "tr6",
-                "statement": "🔴 TÌNH HUỐNG LỖI: Không gian vũ trụ sâu thẳm giữa các thiên hà hoàn toàn là môi trường chân không, tĩnh lặng và tối tăm tuyệt đối. Do đó, nhiệt độ bức xạ ở những vùng trống rỗng này là chính xác 0 Kelvin.",
-                "correct_answer": "Sai",
-                "explanation": "Không gian không bao giờ chạm mức 0K. Khi hướng các thiết bị quan sát thiên văn ra những khoảng không tối tăm nhất, các nhà khoa học vẫn đo được một phông bức xạ nhiệt tàn dư từ Vụ Nổ Lớn (Big Bang), gọi là Bức xạ Nền Vi sóng Vũ trụ (CMB). Bức xạ này hoạt động như một vật đen lý tưởng có nhiệt độ khoảng 2.7 Kelvin, lấp đầy mọi ngóc ngách của vũ trụ.",
-                "concept": "Bức xạ Nền Vi sóng Vũ trụ (CMB)",
-                "ai_context": "Học sinh vừa học về CMB (tàn dư Big Bang, nhiệt độ không gian ~2.7K chứ không phải 0K). Hãy hỏi học sinh xem việc phát hiện ra 'tiếng vọng bức xạ' cực kỳ nhỏ nhoi này có ý nghĩa to lớn gì đối với hiểu biết của con người về vũ trụ."
+                "explanation": "Một kính phẳng không có khả năng tạo ảnh. Vật kính của kính thiên văn phải là một THẤU KÍNH HỘI TỤ (mặt lồi). Lợi dụng hiện tượng khúc xạ, độ cong của thấu kính bẻ cong đồng loạt các tia sáng song song chiếu tới từ các vì sao xa xôi, hội tụ chúng lại tại tiêu điểm để tạo ra một ảnh thật, sau đó dùng thị kính để phóng đại ảnh đó lên.",
+                "ai_context": "Học sinh hiểu sai cơ chế tạo ảnh của thấu kính. Concept: Thấu kính hội tụ sử dụng sự khúc xạ qua bề mặt cong để bẻ gãy và gom tia sáng về một điểm.",
+                "svg_type": "lens"
             }
         ]
     }
@@ -546,29 +606,6 @@ def go(page):
     st.rerun()
 
 # ==========================================
-# HELPERS
-# ==========================================
-def progress_bar(value, max_val):
-    pct = int((value / max_val) * 100)
-    st.markdown(f"""
-    <div class="prog-wrap">
-        <div class="prog-fill" style="width:{pct}%"></div>
-    </div>
-    """, unsafe_allow_html=True)
-def detect_misconception(user_answer, scenario):
-    text = scenario["statement"].lower()
-    # Phân tích dựa trên các từ khóa trong tình huống
-    if "tự dừng lại" in text or "chậm dần" in text:
-        return "Lỗi tư duy: Tin rằng vật thể tự dừng lại khi không có lực (Sai Định luật 1 Newton)."
-    if "lực lớn hơn" in text:
-        return "Lỗi tư duy: Nhầm lẫn giữa Lực (tạo gia tốc) và Vận tốc trực tiếp."
-    if "nặng hơn rơi nhanh hơn" in text:
-        return "Lỗi tư duy: Áp đặt cảm giác đời thường (lực cản không khí) vào môi trường chân không."
-    if "áo màu đen" in text or "nảy lên cao hơn" in text:
-        return "Lỗi tư duy: Vi phạm định luật bảo toàn hoặc hiểu sai về phát xạ nhiệt."
-    
-    return f"Lỗi tư duy: Nhầm lẫn cơ bản về {scenario['concept']}."
-# ==========================================
 # TRANG CHỦ
 # ==========================================
 def render_home():
@@ -576,7 +613,7 @@ def render_home():
     total_worlds = len(WORLDS)
     total_scenarios = sum(len(w["scenarios"]) for w in WORLDS.values())
 
-    st.markdown('<div class="hero-tag">⚡ Physics Glitch — v2.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-tag">⚡ Physics Glitch — v3.0 (Optics Edition)</div>', unsafe_allow_html=True)
     st.markdown('<h1 class="hero-title">PHYSICS<br>GLITCH</h1>', unsafe_allow_html=True)
     st.markdown('<p class="hero-sub">Hiểu đúng Vật lý bằng cách khám phá những điều sai</p>', unsafe_allow_html=True)
 
@@ -677,7 +714,7 @@ def render_choose():
                     </div>
                 </div>
                 <p class="world-desc">{wd['description']}</p>
-                <p style="font-size:0.8rem;color:#3a6a8c;margin:0.5rem 0 0">{len(wd['scenarios'])} tình huống • Định luật Newton & cơ học</p>
+                <p style="font-size:0.8rem;color:#3a6a8c;margin:0.5rem 0 0">{len(wd['scenarios'])} tình huống • Quang học</p>
             </div>
             """, unsafe_allow_html=True)
         with col2:
@@ -706,17 +743,23 @@ def render_scenario():
     idx = st.session_state.scenario_idx
     total = len(wd["scenarios"])
 
-    if idx >= total:
+    if len(st.session_state.answered_scenarios) >= total:
         go("result")
         return
 
     scenario = wd["scenarios"][idx]
 
-    # Header
-    st.markdown(f'<div class="step-indicator step-active">// {wd["emoji"]} {wd["name"].upper()} — TÌNH HUỐNG {idx+1}/{total} //</div>', unsafe_allow_html=True)
-    progress_bar(idx + 1, total)
+    # Header: Tính toán số câu đã hoàn thành để hiển thị thanh tiến trình chuẩn xác
+    current_step = len(st.session_state.answered_scenarios) + 1
+    
+    st.markdown(f'<div class="step-indicator step-active">// {wd["emoji"]} {wd["name"].upper()} — TÌNH HUỐNG {current_step}/{total} //</div>', unsafe_allow_html=True)
+    progress_bar(current_step, total)
 
     st.markdown(f'<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:{wd["color"]};margin-bottom:0.3rem">{scenario["concept"]}</h2>', unsafe_allow_html=True)
+
+    # Render SVG Simulation nếu có
+    if "svg_type" in scenario and scenario["svg_type"] != "none":
+        render_svg_simulation(scenario["svg_type"])
 
     # Scenario box
     st.markdown(f'<div class="scenario-box">{scenario["statement"]}</div>', unsafe_allow_html=True)
@@ -842,7 +885,7 @@ def render_teach_ai():
             st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
     if not st.session_state.ai_done:
-        placeholder_text = "Nhập lời giải thích của bạn... VD: 'Vì không có lực nào tác dụng, nên theo định luật Newton...'"
+        placeholder_text = "Nhập lời giải thích của bạn... VD: 'Vì chiết suất lớn nên...'"
         user_input = st.text_area("", placeholder=placeholder_text, height=120, label_visibility="collapsed")
 
         col1, col2 = st.columns([2, 1])
@@ -855,6 +898,7 @@ def render_teach_ai():
                     st.session_state.ai_chat_history.append({"role": "user", "content": user_input})
                     
                     user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
+                    
                     # Chuẩn bị dữ liệu học sinh dạng chuỗi để đưa cho AI
                     student_data = f"""
                     - Lịch sử sai lầm: {[m['type'] for m in st.session_state.student_model['mistakes'][-3:]]} 
@@ -885,8 +929,9 @@ Nhiệm vụ của bạn:
                     if has_api:
                         with st.spinner("AI đang suy nghĩ..."):
                             try:
+                                # Sử dụng dòng model cực nhanh và hạn mức cao để tránh lỗi 429
                                 model = genai.GenerativeModel(
-                                    model_name="gemini-2.5-flash",
+                                    model_name="gemini-2.0-flash-lite",
                                     system_instruction=system_prompt
                                 )
                                 gemini_history = []
@@ -927,7 +972,7 @@ Nhiệm vụ của bạn:
 
     else:
         # AI done — nút tiếp theo
-        st.markdown('<div class="badge-correct" style="margin-top:1rem">✓ HOÀN THÀNH MODULE DẠY AI</div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge-correct" style="margin-top:1rem">✓ HOÀN THÀNH MODULE</div>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
         if len(st.session_state.answered_scenarios) < total:
@@ -936,7 +981,6 @@ Nhiệm vụ của bạn:
                 unanswered = [sc for sc in wd["scenarios"] if sc["id"] not in st.session_state.answered_scenarios]
                 
                 # Sắp xếp các câu chưa trả lời dựa trên điểm mastery (Ưu tiên điểm thấp nhất)
-                # Nếu concept chưa có điểm, mặc định là 0.5
                 unanswered.sort(key=lambda sc: st.session_state.student_model["concept_mastery"].get(sc["concept"], 0.5))
                 
                 # Chọn câu có điểm mastery thấp nhất
@@ -979,8 +1023,8 @@ def render_result():
 
     # Nhận xét
     if pct == 100:
-        st.markdown('<div class="badge-correct" style="display:block;text-align:center;padding:0.8rem">🌟 HOÀN HẢO — Bạn là bậc thầy vật lý!</div>', unsafe_allow_html=True)
-        msg = "Xuất sắc! Bạn đã phát hiện tất cả lỗi sai và hiểu bản chất vật lý thật sự."
+        st.markdown('<div class="badge-correct" style="display:block;text-align:center;padding:0.8rem">🌟 HOÀN HẢO — Bạn là bậc thầy quang học!</div>', unsafe_allow_html=True)
+        msg = "Xuất sắc! Bạn đã phát hiện tất cả lỗi sai và hiểu bản chất hiện tượng khúc xạ thật sự."
     elif pct >= 60:
         st.markdown('<div class="badge-unsure" style="display:block;text-align:center;padding:0.8rem">👍 TỐT — Còn vài điểm cần ôn lại</div>', unsafe_allow_html=True)
         msg = "Bạn đã hiểu phần lớn. Hãy đọc lại giải thích của những tình huống bạn chưa chắc chắn."
