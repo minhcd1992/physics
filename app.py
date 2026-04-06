@@ -363,154 +363,28 @@ button[kind="primary"] {
 # ==========================================
 # HELPERS & MÔ PHỎNG SVG
 # ==========================================
-def progress_bar(value, max_val):
-    pct = int((value / max_val) * 100)
-    st.markdown(f"""
-    <div class="prog-wrap">
-        <div class="prog-fill" style="width:{pct}%"></div>
-    </div>
-    """, unsafe_allow_html=True)
-
 def detect_misconception(user_answer, scenario):
-    text = scenario["statement"].lower()
-    
-    # Nếu user trả lời "Đúng" cho một nhận định "Sai" -> Phân tích lỗi
+    # Trực tiếp lấy câu báo lỗi từ file dữ liệu
     if user_answer == "Đúng" and scenario["correct_answer"] == "Sai":
-        if "truyền thẳng" in text:
-            return "concept_confusion: Bỏ qua sự thay đổi tốc độ ánh sáng giữa 2 môi trường."
-        if "vị trí thực tế" in text:
-            return "real_vs_virtual: Áp đặt trực giác đời thường, nhầm lẫn ảnh ảo thành vật thật."
-        if "góc nghiêng lớn" in text:
-            return "missing_concept: Không biết về hiện tượng Phản xạ toàn phần và góc tới hạn."
-        if "tăng tốc độ" in text:
-            return "inverse_relation_error: Hiểu ngược mối quan hệ n = c/v."
-        if "nhuộm màu" in text:
-            return "nature_of_light: Hiểu sai bản chất ánh sáng trắng là chùm sáng đa sắc."
-        if "chặn bớt ánh sáng" in text:
-            return "mechanism_error: Không hiểu cơ chế tạo ảnh bằng sự giao hội tia sáng của thấu kính."
+        return scenario.get("misconception_msg", f"Lỗi tư duy: Nhầm lẫn cơ bản về {scenario['concept']}.")
             
     if user_answer == "Không chắc chắn":
         return "lack_of_confidence: Học sinh thiếu tự tin hoặc chưa từng học khái niệm này."
         
     return "unidentified_error"
 
-def render_svg_simulation(svg_type):
-    """Hàm vẽ các mô phỏng hiện tượng khúc xạ bằng HTML/SVG"""
+def render_svg_simulation(scenario):
+    # Trực tiếp lấy mã SVG từ file dữ liệu
+    svg_content = scenario.get("svg_code", "").strip()
     
-    if svg_type == "basic":
-        # Khúc xạ cơ bản (Không khí -> Nước)
-        svg = """
+    if svg_content:
+        # Bọc thẻ div định dạng viền xanh cho đẹp mắt
+        full_html = f"""
         <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
-            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
-              <rect x="0" y="100" width="400" height="100" fill="#00d4ff33" />
-              <line x1="0" y1="100" x2="400" y2="100" stroke="#00d4ff" stroke-width="2" />
-              <line x1="200" y1="20" x2="200" y2="180" stroke="#ffffff55" stroke-dasharray="5,5" />
-              <line x1="50" y1="20" x2="200" y2="100" stroke="#ffca28" stroke-width="3" class="ray" />
-              <line x1="200" y1="100" x2="350" y2="180" stroke="#ffffff33" stroke-width="1" stroke-dasharray="2,2" />
-              <line x1="200" y1="100" x2="260" y2="180" stroke="#ffca28" stroke-width="3" class="ray" />
-              <text x="10" y="90" fill="#ffffff" font-size="12" font-family="sans-serif">KHÔNG KHÍ (n1)</text>
-              <text x="10" y="120" fill="#00d4ff" font-size="12" font-family="sans-serif">NƯỚC (n2 > n1)</text>
-              <path d="M 180 89 A 20 20 0 0 1 200 80" fill="none" stroke="#ffca28" stroke-width="1"/>
-              <path d="M 200 120 A 20 20 0 0 1 215 120" fill="none" stroke="#ffca28" stroke-width="1"/>
-            </svg>
-            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Tia sáng bị bẻ cong về phía pháp tuyến khi đi vào môi trường đặc hơn.</div>
+            {svg_content}
         </div>
         """
-    elif svg_type == "depth":
-        # Độ sâu ảo
-        svg = """
-        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
-            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
-              <rect x="0" y="80" width="400" height="120" fill="#00d4ff33" />
-              <line x1="0" y1="80" x2="400" y2="80" stroke="#00d4ff" stroke-width="2" />
-              <circle cx="200" cy="180" r="10" fill="#ffca28" />
-              <text x="220" y="185" fill="#ffffff" font-size="12" font-family="sans-serif">Vị trí thật</text>
-              <circle cx="160" cy="120" r="10" fill="#ffca2855" class="pulse"/>
-              <text x="180" y="125" fill="#00d4ff" font-size="12" font-family="sans-serif">Vị trí ảo (Mắt thấy)</text>
-              <line x1="200" y1="180" x2="140" y2="80" stroke="#ffffff88" stroke-width="2" />
-              <line x1="140" y1="80" x2="100" y2="20" stroke="#ffffff" stroke-width="2" class="ray" />
-              <line x1="140" y1="80" x2="160" y2="120" stroke="#00d4ff88" stroke-dasharray="4,4" />
-              <path d="M 80 10 Q 100 -5 120 10 Q 100 25 80 10 Z" fill="none" stroke="#ffffff" stroke-width="2"/>
-              <circle cx="100" cy="10" r="4" fill="#ffffff" />
-            </svg>
-            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Mắt nhìn theo đường thẳng kéo dài của tia khúc xạ tạo ra ảnh ảo.</div>
-        </div>
-        """
-    elif svg_type == "total_reflection":
-        # Phản xạ toàn phần
-        svg = """
-        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
-            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
-              <rect x="0" y="100" width="400" height="100" fill="#00d4ff33" />
-              <line x1="0" y1="100" x2="400" y2="100" stroke="#00d4ff" stroke-width="2" />
-              <line x1="200" y1="20" x2="200" y2="180" stroke="#ffffff55" stroke-dasharray="5,5" />
-              <circle cx="200" cy="180" r="6" fill="#ffca28" class="pulse"/>
-              
-              <line x1="200" y1="180" x2="180" y2="100" stroke="#ffffff55" stroke-width="1" />
-              <line x1="180" y1="100" x2="150" y2="20" stroke="#ffffff55" stroke-width="1" />
-              
-              <line x1="200" y1="180" x2="250" y2="100" stroke="#ffffff88" stroke-width="2" />
-              <line x1="250" y1="100" x2="380" y2="100" stroke="#ffffff88" stroke-width="2" />
-              
-              <line x1="200" y1="180" x2="280" y2="100" stroke="#ff4b4b" stroke-width="3" class="ray" />
-              <line x1="280" y1="100" x2="360" y2="180" stroke="#ff4b4b" stroke-width="3" class="ray" />
-              <text x="290" y="140" fill="#ff4b4b" font-size="12" font-family="sans-serif">Phản xạ toàn phần</text>
-            </svg>
-            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Khi góc tới quá lớn, tia sáng không thể thoát ra ngoài môi trường.</div>
-        </div>
-        """
-    elif svg_type == "prism":
-        # Tán sắc qua lăng kính
-        svg = """
-        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
-            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
-              <polygon points="200,40 120,160 280,160" fill="#ffffff11" stroke="#ffffff" stroke-width="2" />
-              <line x1="50" y1="130" x2="160" y2="100" stroke="#ffffff" stroke-width="4" class="ray" />
-              <text x="50" y="120" fill="#ffffff" font-size="10" font-family="sans-serif">Ánh sáng trắng</text>
-              
-              <line x1="160" y1="100" x2="240" y2="100" stroke="#ff4b4b" stroke-width="2" />
-              <line x1="160" y1="100" x2="250" y2="115" stroke="#00ff88" stroke-width="2" />
-              <line x1="160" y1="100" x2="260" y2="130" stroke="#9900ff" stroke-width="2" />
-              
-              <line x1="240" y1="100" x2="350" y2="60" stroke="#ff4b4b" stroke-width="2" class="ray"/>
-              <line x1="250" y1="115" x2="350" y2="100" stroke="#00ff88" stroke-width="2" class="ray"/>
-              <line x1="260" y1="130" x2="350" y2="140" stroke="#9900ff" stroke-width="2" class="ray"/>
-              
-              <text x="360" y="65" fill="#ff4b4b" font-size="10" font-family="sans-serif">ĐỎ (Ít lệch)</text>
-              <text x="360" y="145" fill="#9900ff" font-size="10" font-family="sans-serif">TÍM (Lệch nhiều)</text>
-            </svg>
-            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Lăng kính bẻ cong các tia màu khác nhau với mức độ khác nhau.</div>
-        </div>
-        """
-    elif svg_type == "lens":
-        # Thấu kính thiên văn
-        svg = """
-        <div style="background:#07101e; border: 1px solid #1a3a5c; border-radius: 8px; padding: 10px; margin-bottom: 1rem; text-align: center;">
-            <svg viewBox="0 0 400 200" width="100%" style="max-width: 500px;">
-              <line x1="0" y1="100" x2="400" y2="100" stroke="#ffffff55" stroke-dasharray="5,5" />
-              <path d="M 200 40 Q 220 100 200 160 Q 180 100 200 40 Z" fill="#00d4ff33" stroke="#00d4ff" stroke-width="2" />
-              
-              <line x1="50" y1="60" x2="195" y2="60" stroke="#ffca28" stroke-width="2" class="ray" />
-              <line x1="50" y1="100" x2="200" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
-              <line x1="50" y1="140" x2="195" y2="140" stroke="#ffca28" stroke-width="2" class="ray" />
-              
-              <line x1="195" y1="60" x2="300" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
-              <line x1="200" y1="100" x2="350" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
-              <line x1="195" y1="140" x2="300" y2="100" stroke="#ffca28" stroke-width="2" class="ray" />
-              
-              <circle cx="300" cy="100" r="4" fill="#ff4b4b" class="pulse"/>
-              <text x="290" y="85" fill="#ff4b4b" font-size="12" font-family="sans-serif">Tiêu điểm</text>
-            </svg>
-            <div style="color:#7eb8d4; font-size:0.85rem; margin-top:5px; font-family:'Be Vietnam Pro', sans-serif;">Mô phỏng: Vật kính hội tụ các tia sáng song song để tạo ảnh thật.</div>
-        </div>
-        """
-    else:
-        # Trống (Dành cho câu hỏi lý thuyết ko cần hình)
-        svg = ""
-        
-    if svg:
-        st.components.v1.html(svg, height=260)
-
+        st.components.v1.html(full_html, height=260)
 # ==========================================
 # KHỞI TẠO SESSION STATE
 # ==========================================
@@ -695,9 +569,8 @@ def render_scenario():
     st.markdown(f'<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:{wd["color"]};margin-bottom:0.3rem">{scenario["concept"]}</h2>', unsafe_allow_html=True)
 
     # Render SVG Simulation nếu có
-    if "svg_type" in scenario and scenario["svg_type"] != "none":
-        render_svg_simulation(scenario["svg_type"])
-
+    render_svg_simulation(scenario)
+    
     # Scenario box
     st.markdown(f'<div class="scenario-box">{scenario["statement"]}</div>', unsafe_allow_html=True)
 
