@@ -497,6 +497,25 @@ def render_home():
     st.markdown('<h1 class="hero-title">PHYSICS<br>GLITCH</h1>', unsafe_allow_html=True)
     st.markdown('<p class="hero-sub">Hiểu đúng Vật lý bằng cách khám phá những điều sai</p>', unsafe_allow_html=True)
 
+    # --- ĐOẠN CODE KIỂM TRA MODEL ---
+    st.markdown('<div class="glitch-card" style="border-color:#ffca28">', unsafe_allow_html=True)
+    st.write("🔍 **ĐANG KIỂM TRA DANH SÁCH MODEL CỦA BẠN:**")
+    try:
+        key = st.secrets.get("GEMINI_API_KEY") or st.session_state.get("_temp_key")
+        if key:
+            genai.configure(api_key=key)
+            models = []
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    models.append(m.name)
+            st.write(models)
+        else:
+            st.write("Chưa có API Key để kiểm tra.")
+    except Exception as e:
+        st.write(f"Lỗi truy vấn: {e}")
+    st.markdown('</div>', unsafe_allow_html=True)
+    # --- KẾT THÚC ĐOẠN KIỂM TRA ---
+
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("""
