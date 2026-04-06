@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import time
 import copy
+from worlds_data import WORLDS
 
 # ==========================================
 # CẤU HÌNH TRANG
