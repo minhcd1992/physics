@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import time
 import copy
+import re
 from worlds_data import WORLDS
 
 # ==========================================
@@ -741,8 +742,8 @@ def render_teach_ai():
                     - Điểm nắm vững kiến thức này (0-1.0): {st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)}
                     """
 
-                    # Prompt hợp nhất: Cấm AI tiết lộ thông số
-                    system_prompt = f"""Bạn là một Gia sư AI cá nhân hóa chuyên Vật lý.
+                    # 2. Prompt tiến hóa: Trở thành Giám khảo ngầm
+                    system_prompt = f"""Bạn là một Hệ thống Gia sư AI cá nhân hóa chuyên Vật lý.
 Context bài học hiện tại: {scenario['ai_context']}
 
 --- DỮ LIỆU NHẬN THỨC CỦA HỌC SINH NÀY ---
@@ -751,19 +752,22 @@ Context bài học hiện tại: {scenario['ai_context']}
 
 Đây là lượt chat thứ {user_turns}.
 Nhiệm vụ của bạn:
-1. Đọc kỹ lời giảng của học sinh. PHẢI CĂN CỨ VÀO DỮ LIỆU NHẬN THỨC Ở TRÊN để điều chỉnh cách nói chuyện.
-   TUYỆT ĐỐI KHÔNG được nhắc đến các từ như "Mastery", "Điểm số", "Lịch sử sai lầm" trong câu trả lời của bạn. Hãy cư xử thật tự nhiên.
-2. Nếu lời giảng CHƯA ĐỦ RÕ: Hãy hỏi THÊM 1 câu hỏi phụ gợi mở (ngắn gọn 2-3 câu). Tuyệt đối KHÔNG dùng từ khóa bí mật.
-3. Nếu học sinh giải thích RẤT CHÍNH XÁC hoặc bảo "không biết/chịu thua": 
-   - Tóm tắt lại kiến thức một cách thân thiện.
-   - BẮT BUỘC chèn cụm từ [ĐÃ_HIỂU] vào cuối câu.
-4. Lượt chat thứ 5 bắt buộc phải chốt vấn đề và dùng cụm từ [ĐÃ_HIỂU]."""
+1. Đọc kỹ phản hồi. TUYỆT ĐỐI KHÔNG nhắc đến các từ như "Mastery", "Điểm số", "Lịch sử sai lầm".
+2. HƯỚNG DẪN SƯ PHẠM:
+   - Nếu học sinh nói "Không biết" hoặc giải thích sai: Hãy giải thích ngắn gọn, đời thường và BẮT BUỘC hỏi lại "Bạn đã hiểu phần này chưa?". (CHƯA ĐƯỢC KẾT THÚC).
+   - Nếu giải thích lủng củng: Gợi ý thêm để họ tự suy nghĩ.
+3. ĐÁNH GIÁ & KẾT THÚC:
+   - CHỈ KẾT THÚC KHI: Học sinh tự giải thích ĐÚNG bản chất, HOẶC học sinh xác nhận "đã hiểu" sau khi nghe bạn giảng.
+   - Khi thỏa mãn điều kiện kết thúc: Bạn phải chốt lại vấn đề, chào tạm biệt và BẮT BUỘC chèn thêm thẻ đánh giá điểm số ở cuối cùng theo cú pháp: [SCORE: x.x] (x.x là điểm từ 0.0 đến 1.0).
+     + Điểm [SCORE: 0.0] - [SCORE: 0.3]: Học sinh không biết gì, phụ thuộc hoàn toàn vào giải thích của AI.
+     + Điểm [SCORE: 0.4] - [SCORE: 0.7]: Hiểu lơ mơ, cần gợi ý nhiều.
+     + Điểm [SCORE: 0.8] - [SCORE: 1.0]: Học sinh tự giải thích xuất sắc.
+   - Ví dụ câu chốt: "Tuyệt vời, bạn đã hiểu đúng bản chất rồi! Cảm ơn bạn nhé. [SCORE: 0.9]" """
 
                     # 3. Gọi API Gemini
                     if has_api:
                         with st.spinner("AI đang suy nghĩ..."):
                             try:
-                                # Sử dụng dòng model cực nhanh và hạn mức cao để tránh lỗi 429
                                 model = genai.GenerativeModel(
                                     model_name="gemini-flash-latest",
                                     system_instruction=system_prompt
@@ -784,14 +788,29 @@ Nhiệm vụ của bạn:
                     else:
                         time.sleep(1)
                         if user_turns >= 3:
-                            ai_reply = f"À, mình hiểu hoàn toàn rồi! Hóa ra {scenario['concept']} là như vậy. Cảm ơn bạn đã kiên nhẫn giảng giải cho mình nhé! [ĐÃ_HIỂU]"
+                            ai_reply = f"À, mình hiểu hoàn toàn rồi! Cảm ơn bạn đã kiên nhẫn giảng giải cho mình nhé! [SCORE: 0.8]"
                         else:
                             ai_reply = f"Cảm ơn bạn! Mình hiểu một phần rồi. Vậy bạn có thể giải thích rõ hơn về ví dụ thực tế được không?"
 
-                    # 4. Kiểm tra từ khóa ẩn để kết thúc bài học
-                    if "[ĐÃ_HIỂU]" in ai_reply:
+                    # 4. KỸ THUẬT "BẮT" ĐIỂM SỐ ẨN TỪ AI
+                    match = re.search(r'\[SCORE:\s*([0-9.]+)\]', ai_reply)
+                    if match or "[ĐÃ_HIỂU]" in ai_reply:  # Giữ lại ĐÃ_HIỂU phòng hờ AI quên fomat
                         st.session_state.ai_done = True
-                        # Cắt bỏ từ khóa để không hiển thị lên giao diện
+                        
+                        if match:
+                            score_str = match.group(1)
+                            try:
+                                ai_score = float(score_str)
+                                # Cập nhật Mastery thực sự: Trọng số 60% từ AI, 40% từ quá khứ
+                                concept = scenario['concept']
+                                old_mastery = st.session_state.student_model["concept_mastery"].get(concept, 0.5)
+                                st.session_state.student_model["concept_mastery"][concept] = 0.4 * old_mastery + 0.6 * ai_score
+                            except:
+                                pass
+                            
+                            # Cắt bỏ cái Thẻ điểm số đi để học sinh không nhìn thấy
+                            ai_reply = re.sub(r'\[SCORE:\s*[0-9.]+\]', '', ai_reply).strip()
+                        
                         ai_reply = ai_reply.replace("[ĐÃ_HIỂU]", "").strip()
 
                     # 5. Lưu phản hồi của AI
@@ -801,6 +820,11 @@ Nhiệm vụ của bạn:
 
         with col2:
             if st.button("Kết thúc thảo luận →"):
+                # Phạt điểm: Nếu bấm bỏ qua, giáng Mastery xuống mức yếu (<0.4)
+                concept = scenario['concept']
+                old_mastery = st.session_state.student_model["concept_mastery"].get(concept, 0.5)
+                st.session_state.student_model["concept_mastery"][concept] = min(old_mastery, 0.3)
+                
                 st.session_state.ai_done = True
                 st.rerun()
 
