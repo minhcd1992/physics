@@ -1,5 +1,5 @@
 import streamlit as st
-import anthropic
+import google.generativeai as genai
 import time
 
 # ==========================================
@@ -15,9 +15,10 @@ st.set_page_config(
 # ==========================================
 # CSS TOÀN CỤC - GIAO DIỆN "GLITCH / SCI-FI"
 # ==========================================
+# Đã đổi sang font Exo 2 (Tiêu đề) và Be Vietnam Pro (Nội dung) để hỗ trợ Tiếng Việt hoàn hảo
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;600&family=Exo+2:wght@400;700;900&display=swap');
 
 /* ---- Reset & nền ---- */
 html, body, [data-testid="stApp"] {
@@ -33,17 +34,17 @@ html, body, [data-testid="stApp"] {
 
 /* ---- Typography ---- */
 h1, h2, h3 {
-    font-family: 'Orbitron', monospace !important;
+    font-family: 'Exo 2', sans-serif !important;
     letter-spacing: 0.05em;
 }
 p, label, span, div, li, a {
-    font-family: 'Rajdhani', sans-serif !important;
+    font-family: 'Be Vietnam Pro', sans-serif !important;
     font-size: 16px;
 }
 
 /* ---- Tiêu đề chính ---- */
 .hero-title {
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: clamp(2.2rem, 6vw, 3.5rem);
     font-weight: 900;
     color: #00d4ff;
@@ -52,7 +53,7 @@ p, label, span, div, li, a {
     margin: 0;
 }
 .hero-sub {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
     font-size: 1.1rem;
     color: #7eb8d4;
     letter-spacing: 0.15em;
@@ -64,7 +65,7 @@ p, label, span, div, li, a {
     background: linear-gradient(90deg, #00d4ff22, #7b2fff22);
     border: 1px solid #00d4ff44;
     color: #00d4ff;
-    font-family: 'Rajdhani', sans-serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
     font-size: 0.85rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -117,7 +118,7 @@ p, label, span, div, li, a {
 .world-card.planet::before { background: linear-gradient(90deg, transparent, #ab47bc, transparent); }
 .world-card.energy::before { background: linear-gradient(90deg, transparent, #ffca28, transparent); }
 .world-title {
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 1rem;
     font-weight: 700;
     margin: 0 0 0.3rem;
@@ -158,7 +159,7 @@ p, label, span, div, li, a {
     color: #00ff88;
     padding: 6px 16px;
     border-radius: 4px;
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 0.85rem;
     display: inline-block;
     margin-bottom: 1rem;
@@ -169,7 +170,7 @@ p, label, span, div, li, a {
     color: #ff4b4b;
     padding: 6px 16px;
     border-radius: 4px;
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 0.85rem;
     display: inline-block;
     margin-bottom: 1rem;
@@ -180,7 +181,7 @@ p, label, span, div, li, a {
     color: #ffca28;
     padding: 6px 16px;
     border-radius: 4px;
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 0.85rem;
     display: inline-block;
     margin-bottom: 1rem;
@@ -210,7 +211,7 @@ p, label, span, div, li, a {
 }
 .ai-bubble::before {
     content: '⚡ AI';
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 0.65rem;
     color: #00d4ff;
     letter-spacing: 0.2em;
@@ -226,7 +227,7 @@ p, label, span, div, li, a {
 }
 .user-bubble::before {
     content: '👤 BẠN';
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 0.65rem;
     color: #00ff88;
     letter-spacing: 0.2em;
@@ -252,7 +253,7 @@ p, label, span, div, li, a {
 
 /* ---- Breadcrumb / step ---- */
 .step-indicator {
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 0.65rem;
     letter-spacing: 0.2em;
     color: #3a6a8c;
@@ -263,7 +264,7 @@ p, label, span, div, li, a {
 
 /* ---- Score display ---- */
 .score-big {
-    font-family: 'Orbitron', monospace;
+    font-family: 'Exo 2', sans-serif;
     font-size: 3.5rem;
     font-weight: 900;
     color: #00d4ff;
@@ -271,7 +272,7 @@ p, label, span, div, li, a {
     line-height: 1;
 }
 .score-label {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: 'Be Vietnam Pro', sans-serif;
     font-size: 0.85rem;
     letter-spacing: 0.2em;
     color: #3a6a8c;
@@ -283,7 +284,7 @@ p, label, span, div, li, a {
     background: transparent !important;
     border: 1px solid #00d4ff66 !important;
     color: #00d4ff !important;
-    font-family: 'Orbitron', monospace !important;
+    font-family: 'Exo 2', sans-serif !important;
     font-size: 0.8rem !important;
     letter-spacing: 0.1em !important;
     border-radius: 4px !important;
@@ -312,7 +313,7 @@ button[kind="primary"] {
     transition: all 0.15s !important;
     cursor: pointer !important;
     color: #7eb8d4 !important;
-    font-family: 'Rajdhani', sans-serif !important;
+    font-family: 'Be Vietnam Pro', sans-serif !important;
     font-size: 1rem !important;
 }
 .stRadio label:hover {
@@ -324,7 +325,7 @@ button[kind="primary"] {
     border: 1px solid #1a3a5c !important;
     border-radius: 8px !important;
     color: #e8f4ff !important;
-    font-family: 'Rajdhani', sans-serif !important;
+    font-family: 'Be Vietnam Pro', sans-serif !important;
     font-size: 1rem !important;
 }
 .stTextArea textarea:focus {
@@ -488,30 +489,6 @@ def progress_bar(value, max_val):
     </div>
     """, unsafe_allow_html=True)
 
-def get_client():
-    """Lấy Anthropic client từ secrets hoặc input thủ công."""
-    try:
-        key = st.secrets["ANTHROPIC_API_KEY"]
-        return anthropic.Anthropic(api_key=key)
-    except Exception:
-        return None
-
-def stream_ai_response(system_prompt, messages):
-    """Gọi Anthropic API với streaming."""
-    client = get_client()
-    if not client:
-        return None
-    try:
-        with client.messages.stream(
-            model="claude-sonnet-4-20250514",
-            max_tokens=400,
-            system=system_prompt,
-            messages=messages,
-        ) as stream:
-            return stream.get_final_message().content[0].text
-    except Exception as e:
-        return f"⚠️ Lỗi kết nối AI: {str(e)}"
-
 # ==========================================
 # TRANG CHỦ
 # ==========================================
@@ -530,15 +507,15 @@ def render_home():
         </p>
         <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:0.5rem">
             <div style="text-align:center">
-                <div style="font-family:Orbitron,monospace;font-size:1.6rem;font-weight:700;color:#00d4ff">3</div>
+                <div style="font-family:'Exo 2',sans-serif;font-size:1.6rem;font-weight:700;color:#00d4ff">3</div>
                 <div style="font-size:0.8rem;color:#3a6a8c;letter-spacing:0.1em;text-transform:uppercase">Thế giới</div>
             </div>
             <div style="text-align:center">
-                <div style="font-family:Orbitron,monospace;font-size:1.6rem;font-weight:700;color:#00d4ff">9</div>
+                <div style="font-family:'Exo 2',sans-serif;font-size:1.6rem;font-weight:700;color:#00d4ff">9</div>
                 <div style="font-size:0.8rem;color:#3a6a8c;letter-spacing:0.1em;text-transform:uppercase">Tình huống</div>
             </div>
             <div style="text-align:center">
-                <div style="font-family:Orbitron,monospace;font-size:1.6rem;font-weight:700;color:#00d4ff">AI</div>
+                <div style="font-family:'Exo 2',sans-serif;font-size:1.6rem;font-weight:700;color:#00d4ff">AI</div>
                 <div style="font-size:0.8rem;color:#3a6a8c;letter-spacing:0.1em;text-transform:uppercase">Phản hồi thật</div>
             </div>
         </div>
@@ -551,37 +528,45 @@ def render_home():
     with col1:
         st.markdown("""<div class="glitch-card" style="text-align:center;padding:1rem">
             <div style="font-size:1.5rem">🔴</div>
-            <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:#ff4b4b;margin:0.3rem 0">BƯỚC 1</div>
+            <div style="font-family:'Exo 2',sans-serif;font-size:0.7rem;color:#ff4b4b;margin:0.3rem 0">BƯỚC 1</div>
             <div style="font-size:0.9rem;color:#7eb8d4">Gặp tình huống lỗi vật lý</div>
         </div>""", unsafe_allow_html=True)
     with col2:
         st.markdown("""<div class="glitch-card" style="text-align:center;padding:1rem">
             <div style="font-size:1.5rem">🧠</div>
-            <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:#ffca28;margin:0.3rem 0">BƯỚC 2</div>
+            <div style="font-family:'Exo 2',sans-serif;font-size:0.7rem;color:#ffca28;margin:0.3rem 0">BƯỚC 2</div>
             <div style="font-size:0.9rem;color:#7eb8d4">Phân tích và giải thích sai lầm</div>
         </div>""", unsafe_allow_html=True)
     with col3:
         st.markdown("""<div class="glitch-card" style="text-align:center;padding:1rem">
             <div style="font-size:1.5rem">⚡</div>
-            <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:#00d4ff;margin:0.3rem 0">BƯỚC 3</div>
+            <div style="font-family:'Exo 2',sans-serif;font-size:0.7rem;color:#00d4ff;margin:0.3rem 0">BƯỚC 3</div>
             <div style="font-size:0.9rem;color:#7eb8d4">Dạy lại AI — nhận phản hồi thật</div>
         </div>""", unsafe_allow_html=True)
 
-    # Kiểm tra API key
-    client = get_client()
-    if not client:
+    # Kiểm tra API key Gemini
+    has_api = False
+    try:
+        if st.secrets.get("GEMINI_API_KEY") or st.session_state.get("_temp_key"):
+            has_api = True
+    except Exception:
+        pass
+
+    if not has_api:
         st.markdown("<br>", unsafe_allow_html=True)
         with st.expander("⚠️ Chưa cấu hình API Key — nhấn để thiết lập"):
             st.markdown("""<p style="color:#7eb8d4;font-size:0.9rem">
             Thêm API key vào <code>.streamlit/secrets.toml</code>:<br><br>
-            <code>ANTHROPIC_API_KEY = "sk-ant-..."</code>
+            <code>GEMINI_API_KEY = "AIzaSy..."</code>
             </p>""", unsafe_allow_html=True)
-            manual_key = st.text_input("Hoặc nhập tạm thời:", type="password", placeholder="sk-ant-...")
+            manual_key = st.text_input("Hoặc nhập Gemini API Key tạm thời:", type="password", placeholder="AIzaSy...")
             if manual_key:
                 st.session_state["_temp_key"] = manual_key
                 st.success("✅ Đã lưu key cho phiên này!")
-        if "_temp_key" in st.session_state:
-            st.markdown('<div style="color:#00ff88;font-size:0.85rem">✅ API key đã được cấu hình</div>', unsafe_allow_html=True)
+                st.rerun()
+                
+    if has_api:
+        st.markdown('<div style="color:#00ff88;font-size:0.85rem">✅ API key đã được cấu hình</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🚀  BẮT ĐẦU KHÁM PHÁ", type="primary", use_container_width=True):
@@ -592,7 +577,7 @@ def render_home():
 # ==========================================
 def render_choose():
     st.markdown('<div class="step-indicator">// CHỌN THẾ GIỚI //</div>', unsafe_allow_html=True)
-    st.markdown('<h2 style="font-family:Orbitron,monospace;color:#e8f4ff;margin-bottom:0.2rem">Chọn chiều không gian</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-family:\'Exo 2\',sans-serif;color:#e8f4ff;margin-bottom:0.2rem">Chọn chiều không gian</h2>', unsafe_allow_html=True)
     st.markdown('<p style="color:#3a6a8c;margin-bottom:1.5rem">Mỗi thế giới mang một quy luật vật lý bị lỗi. Bạn sẽ phải tìm ra sai lầm.</p>', unsafe_allow_html=True)
 
     for wk, wd in WORLDS.items():
@@ -647,7 +632,7 @@ def render_scenario():
     st.markdown(f'<div class="step-indicator step-active">// {wd["emoji"]} {wd["name"].upper()} — TÌNH HUỐNG {idx+1}/{total} //</div>', unsafe_allow_html=True)
     progress_bar(idx + 1, total)
 
-    st.markdown(f'<h2 style="font-family:Orbitron,monospace;font-size:1.1rem;color:{wd["color"]};margin-bottom:0.3rem">{scenario["concept"]}</h2>', unsafe_allow_html=True)
+    st.markdown(f'<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:{wd["color"]};margin-bottom:0.3rem">{scenario["concept"]}</h2>', unsafe_allow_html=True)
 
     # Scenario box
     st.markdown(f'<div class="scenario-box">{scenario["statement"]}</div>', unsafe_allow_html=True)
@@ -709,7 +694,7 @@ def render_analysis():
 
     # Giải thích
     st.markdown('<div class="explain-box">', unsafe_allow_html=True)
-    st.markdown(f'<strong style="color:#00ff88;font-family:Orbitron,monospace;font-size:0.8rem;letter-spacing:0.1em">GIẢI THÍCH KHOA HỌC</strong>', unsafe_allow_html=True)
+    st.markdown(f'<strong style="color:#00ff88;font-family:\'Exo 2\',sans-serif;font-size:0.8rem;letter-spacing:0.1em">GIẢI THÍCH KHOA HỌC</strong>', unsafe_allow_html=True)
     st.markdown(f'<p style="margin:0.5rem 0 0;color:#b8ffe0">{scenario["explanation"]}</p>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -727,17 +712,18 @@ def render_teach_ai():
     total = len(wd["scenarios"])
     scenario = wd["scenarios"][idx]
 
-    # Lấy client — hỗ trợ cả key tạm
-    client = None
+    # Khởi tạo Gemini client
+    has_api = False
     try:
-        key = st.secrets.get("ANTHROPIC_API_KEY") or st.session_state.get("_temp_key")
+        key = st.secrets.get("GEMINI_API_KEY") or st.session_state.get("_temp_key")
         if key:
-            client = anthropic.Anthropic(api_key=key)
+            genai.configure(api_key=key)
+            has_api = True
     except Exception:
         pass
 
     st.markdown('<div class="step-indicator step-active">// MODULE 3 — DẠY AI //</div>', unsafe_allow_html=True)
-    st.markdown('<h2 style="font-family:Orbitron,monospace;font-size:1.1rem;color:#00d4ff">AI đang cần sự giúp đỡ của bạn</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:#00d4ff">AI đang cần sự giúp đỡ của bạn</h2>', unsafe_allow_html=True)
     st.markdown(f'<p style="color:#7eb8d4">Giải thích lại khái niệm <strong style="color:#e8f4ff">"{scenario["concept"]}"</strong> cho AI bằng ngôn từ của chính bạn. AI sẽ đọc và phản hồi thật sự.</p>', unsafe_allow_html=True)
 
     # Hiển thị lịch sử chat
@@ -769,24 +755,30 @@ Vai trò của bạn:
 
 Trả lời bằng tiếng Việt, ngắn gọn (3-5 câu), thân thiện và tò mò như một AI đang học hỏi."""
 
-                    messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.ai_chat_history]
-
-                    if client:
+                    if has_api:
                         with st.spinner("AI đang suy nghĩ..."):
                             try:
-                                response = client.messages.create(
-                                    model="claude-sonnet-4-20250514",
-                                    max_tokens=400,
-                                    system=system_prompt,
-                                    messages=messages
+                                # Tạo model Gemini với System Instruction
+                                model = genai.GenerativeModel(
+                                    model_name="gemini-1.5-flash",
+                                    system_instruction=system_prompt
                                 )
-                                ai_reply = response.content[0].text
+                                
+                                # Chuyển đổi lịch sử chat sang định dạng Gemini
+                                gemini_history = []
+                                for m in st.session_state.ai_chat_history:
+                                    role = "user" if m["role"] == "user" else "model"
+                                    gemini_history.append({"role": role, "parts": [m["content"]]})
+                                
+                                # Gọi API Gemini
+                                response = model.generate_content(gemini_history)
+                                ai_reply = response.text
                             except Exception as e:
-                                ai_reply = f"⚠️ Lỗi kết nối: {str(e)}"
+                                ai_reply = f"⚠️ Lỗi kết nối API Gemini: {str(e)}"
                     else:
                         # Fallback thông minh nếu không có API
                         time.sleep(1)
-                        ai_reply = f"Cảm ơn bạn đã giải thích về **{scenario['concept']}**! Tôi hiểu hơn rồi. Vậy bạn có thể cho tôi một ví dụ thực tế trong cuộc sống hàng ngày mà bạn có thể quan sát nguyên lý này không? *(Lưu ý: Đang dùng AI mô phỏng — cần API key để nhận phản hồi thật)*"
+                        ai_reply = f"Cảm ơn bạn đã giải thích về **{scenario['concept']}**! Tôi hiểu hơn rồi. Vậy bạn có thể cho tôi một ví dụ thực tế trong cuộc sống hàng ngày mà bạn có thể quan sát nguyên lý này không? *(Lưu ý: Đang dùng AI mô phỏng — cần Gemini API key để nhận phản hồi thật)*"
 
                     st.session_state.ai_chat_history.append({"role": "assistant", "content": ai_reply})
 
@@ -858,7 +850,7 @@ def render_result():
 
     # Tổng kết kiến thức
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<h3 style="font-family:Orbitron,monospace;font-size:0.9rem;color:#3a6a8c;letter-spacing:0.15em">KIẾN THỨC ĐÃ TRẢI QUA</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#3a6a8c;letter-spacing:0.15em">KIẾN THỨC ĐÃ TRẢI QUA</h3>', unsafe_allow_html=True)
     for sc in wd["scenarios"]:
         st.markdown(f"""
         <div style="display:flex;align-items:center;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid #1a3a5c">
