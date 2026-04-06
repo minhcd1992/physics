@@ -554,13 +554,18 @@ def progress_bar(value, max_val):
 # TRANG CHỦ
 # ==========================================
 def render_home():
+    # 1. Tự động đếm số lượng thế giới và tổng số tình huống
+    total_worlds = len(WORLDS)
+    total_scenarios = sum(len(w["scenarios"]) for w in WORLDS.values())
+
     st.markdown('<div class="hero-tag">⚡ Physics Glitch — v2.0</div>', unsafe_allow_html=True)
     st.markdown('<h1 class="hero-title">PHYSICS<br>GLITCH</h1>', unsafe_allow_html=True)
     st.markdown('<p class="hero-sub">Hiểu đúng Vật lý bằng cách khám phá những điều sai</p>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("""
+    # 2. Thêm chữ 'f' trước dấu ba nháy kép và truyền biến vào
+    st.markdown(f"""
     <div class="glitch-card">
         <p style="color:#7eb8d4;font-size:1rem;margin:0 0 1rem">
         Chào mừng đến với một vũ trụ nơi các định luật vật lý đã bị <span style="color:#ff4b4b">phá vỡ</span>.
@@ -568,11 +573,11 @@ def render_home():
         </p>
         <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:0.5rem">
             <div style="text-align:center">
-                <div style="font-family:'Exo 2',sans-serif;font-size:1.6rem;font-weight:700;color:#00d4ff">3</div>
+                <div style="font-family:'Exo 2',sans-serif;font-size:1.6rem;font-weight:700;color:#00d4ff">{total_worlds}</div>
                 <div style="font-size:0.8rem;color:#3a6a8c;letter-spacing:0.1em;text-transform:uppercase">Thế giới</div>
             </div>
             <div style="text-align:center">
-                <div style="font-family:'Exo 2',sans-serif;font-size:1.6rem;font-weight:700;color:#00d4ff">9</div>
+                <div style="font-family:'Exo 2',sans-serif;font-size:1.6rem;font-weight:700;color:#00d4ff">{total_scenarios}</div>
                 <div style="font-size:0.8rem;color:#3a6a8c;letter-spacing:0.1em;text-transform:uppercase">Tình huống</div>
             </div>
             <div style="text-align:center">
