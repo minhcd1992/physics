@@ -931,7 +931,7 @@ Nhiệm vụ của bạn:
                             try:
                                 # Sử dụng dòng model cực nhanh và hạn mức cao để tránh lỗi 429
                                 model = genai.GenerativeModel(
-                                    model_name="gemini-2.0-flash-lite",
+                                    model_name="gemini-flash-latest",
                                     system_instruction=system_prompt
                                 )
                                 gemini_history = []
