@@ -361,8 +361,16 @@ button[kind="primary"] {
 """, unsafe_allow_html=True)
 
 # ==========================================
-# HELPERS & MÔ PHỎNG SVG
+# HELPERS
 # ==========================================
+def progress_bar(value, max_val):
+    pct = int((value / max_val) * 100)
+    st.markdown(f"""
+    <div class="prog-wrap">
+        <div class="prog-fill" style="width:{pct}%"></div>
+    </div>
+    """, unsafe_allow_html=True)
+
 def detect_misconception(user_answer, scenario):
     # Trực tiếp lấy câu báo lỗi từ file dữ liệu
     if user_answer == "Đúng" and scenario["correct_answer"] == "Sai":
