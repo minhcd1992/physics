@@ -523,13 +523,19 @@ WORLDS = {
 defaults = {
     "page": "home",
     "selected_world": None,
-    "scenario_idx": 0,
+    "scenario_idx": 0,          # Dùng để đếm xem đang ở câu thứ mấy
+    "current_sc_id": None,      # ID của tình huống hiện tại (phục vụ adaptive)
     "user_answer": None,
     "score": 0,
     "answered_scenarios": set(),
     "ai_chat_history": [],
     "ai_done": False,
     "show_explanation": False,
+    # THÊM BỘ NÃO AI (MEMORY LAYER)
+    "student_model": {
+        "concept_mastery": {},   # Điểm số hiểu biết từng khái niệm (-1 đến 1)
+        "mistakes": [],          # Lịch sử sai lầm cụ thể
+    }
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -549,7 +555,19 @@ def progress_bar(value, max_val):
         <div class="prog-fill" style="width:{pct}%"></div>
     </div>
     """, unsafe_allow_html=True)
-
+def detect_misconception(user_answer, scenario):
+    text = scenario["statement"].lower()
+    # Phân tích dựa trên các từ khóa trong tình huống
+    if "tự dừng lại" in text or "chậm dần" in text:
+        return "Lỗi tư duy: Tin rằng vật thể tự dừng lại khi không có lực (Sai Định luật 1 Newton)."
+    if "lực lớn hơn" in text:
+        return "Lỗi tư duy: Nhầm lẫn giữa Lực (tạo gia tốc) và Vận tốc trực tiếp."
+    if "nặng hơn rơi nhanh hơn" in text:
+        return "Lỗi tư duy: Áp đặt cảm giác đời thường (lực cản không khí) vào môi trường chân không."
+    if "áo màu đen" in text or "nảy lên cao hơn" in text:
+        return "Lỗi tư duy: Vi phạm định luật bảo toàn hoặc hiểu sai về phát xạ nhiệt."
+    
+    return f"Lỗi tư duy: Nhầm lẫn cơ bản về {scenario['concept']}."
 # ==========================================
 # TRANG CHỦ
 # ==========================================
@@ -721,9 +739,31 @@ def render_scenario():
                 clean = answer.split("  ")[1]
                 st.session_state.user_answer = clean
                 st.session_state.show_explanation = True
-                if clean == scenario["correct_answer"] and scenario["id"] not in st.session_state.answered_scenarios:
-                    st.session_state.score += 10
-                    st.session_state.answered_scenarios.add(scenario["id"])
+                
+                concept = scenario["concept"]
+                
+                # Khởi tạo điểm concept nếu chưa có
+                if concept not in st.session_state.student_model["concept_mastery"]:
+                    st.session_state.student_model["concept_mastery"][concept] = 0.5
+                
+                # KIỂM TRA VÀ CẬP NHẬT STUDENT MODEL
+                if clean == scenario["correct_answer"]:
+                    # Cộng điểm nếu đúng, tối đa là 1.0
+                    st.session_state.student_model["concept_mastery"][concept] = min(1.0, st.session_state.student_model["concept_mastery"][concept] + 0.2)
+                    if scenario["id"] not in st.session_state.answered_scenarios:
+                        st.session_state.score += 10
+                else:
+                    # Trừ điểm nếu sai, tối thiểu là 0.0
+                    st.session_state.student_model["concept_mastery"][concept] = max(0.0, st.session_state.student_model["concept_mastery"][concept] - 0.3)
+                    # Ghi nhận sai lầm vào lịch sử
+                    mistake_type = detect_misconception(clean, scenario)
+                    st.session_state.student_model["mistakes"].append({
+                        "concept": concept,
+                        "type": mistake_type,
+                        "user_chose": clean
+                    })
+
+                st.session_state.answered_scenarios.add(scenario["id"])
                 st.session_state.ai_chat_history = []
                 st.session_state.ai_done = False
                 go("analysis")
@@ -817,18 +857,31 @@ def render_teach_ai():
                     user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
 
                     # 2. Prompt hợp nhất: Giao quyền tự quyết cho AI với từ khóa ẩn
-                    system_prompt = f"""Bạn là một AI đang được người dùng dạy về Vật lý.
-Context: {scenario['ai_context']}
+                    system_prompt = # Chuẩn bị dữ liệu học sinh dạng chuỗi để đưa cho AI
+                    student_data = f"""
+                    - Lịch sử sai lầm: {[m['type'] for m in st.session_state.student_model['mistakes'][-3:]]} 
+                    - Điểm nắm vững kiến thức này (0-1.0): {st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)}
+                    """
+
+                    # 2. Prompt hợp nhất: Giao quyền tự quyết & Đưa bộ nhớ vào
+                    system_prompt = f"""Bạn là một Gia sư AI cá nhân hóa chuyên Vật lý.
+Context bài học hiện tại: {scenario['ai_context']}
+
+--- DỮ LIỆU NHẬN THỨC CỦA HỌC SINH NÀY ---
+{student_data}
+------------------------------------------
 
 Đây là lượt chat thứ {user_turns}.
 Nhiệm vụ của bạn:
-1. Đọc kỹ lời giảng của người dùng.
-2. Nếu lời giảng CHƯA ĐỦ RÕ, hoặc bạn muốn đào sâu tư duy: Hãy hỏi THÊM 1 câu hỏi phụ gợi mở (ngắn gọn 2-3 câu). Tuyệt đối KHÔNG dùng từ khóa bí mật.
-3. Nếu người dùng giải thích RẤT CHÍNH XÁC, DỄ HIỂU, hoặc người dùng nói "không biết/chịu thua": 
+1. Đọc kỹ lời giảng của học sinh. PHẢI CĂN CỨ VÀO DỮ LIỆU NHẬN THỨC Ở TRÊN:
+   - Nếu học sinh từng có "Lịch sử sai lầm" liên quan: Hãy đặt câu hỏi xoáy sâu vào chính sai lầm đó để xem họ thực sự hiểu chưa.
+   - Nếu "Điểm nắm vững" thấp (<0.5): Giải thích bằng ngôn ngữ cực kỳ đời thường, đưa ví dụ thực tế gần gũi.
+   - Nếu "Điểm nắm vững" cao (>0.8): Hãy hỏi một câu mở rộng, nâng cao, hoặc đố mẹo.
+2. Nếu lời giảng CHƯA ĐỦ RÕ: Hãy hỏi THÊM 1 câu hỏi phụ gợi mở (ngắn gọn 2-3 câu). Tuyệt đối KHÔNG dùng từ khóa bí mật.
+3. Nếu học sinh giải thích RẤT CHÍNH XÁC hoặc bảo "không biết/chịu thua": 
    - Tóm tắt lại kiến thức một cách thân thiện.
-   - Cảm ơn người dùng.
-   - BẮT BUỘC chèn thêm cụm từ chính xác này vào cuối câu trả lời: [ĐÃ_HIỂU]
-4. Nếu đã đến lượt chat thứ 5, bắt buộc phải chốt vấn đề và dùng cụm từ [ĐÃ_HIỂU] để tránh vòng lặp quá dài."""
+   - BẮT BUỘC chèn cụm từ [ĐÃ_HIỂU] vào cuối câu.
+4. Lượt chat thứ 5 bắt buộc phải chốt vấn đề và dùng cụm từ [ĐÃ_HIỂU]."""
 
                     # 3. Gọi API Gemini
                     if has_api:
@@ -879,9 +932,21 @@ Nhiệm vụ của bạn:
         st.markdown('<div class="badge-correct" style="margin-top:1rem">✓ HOÀN THÀNH MODULE DẠY AI</div>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
-        if idx < total - 1:
-            if st.button(f"⚡  TÌNH HUỐNG TIẾP THEO ({idx+2}/{total})", type="primary", use_container_width=True):
-                st.session_state.scenario_idx += 1
+        if len(st.session_state.answered_scenarios) < total:
+            if st.button(f"⚡  TÌNH HUỐNG TIẾP THEO ({len(st.session_state.answered_scenarios)+1}/{total})", type="primary", use_container_width=True):
+                # LOGIC ADAPTIVE: Chọn câu hỏi tiếp theo
+                unanswered = [sc for sc in wd["scenarios"] if sc["id"] not in st.session_state.answered_scenarios]
+                
+                # Sắp xếp các câu chưa trả lời dựa trên điểm mastery (Ưu tiên điểm thấp nhất)
+                # Nếu concept chưa có điểm, mặc định là 0.5
+                unanswered.sort(key=lambda sc: st.session_state.student_model["concept_mastery"].get(sc["concept"], 0.5))
+                
+                # Chọn câu có điểm mastery thấp nhất
+                next_sc = unanswered[0]
+                
+                # Tìm lại index của câu đó để render
+                st.session_state.scenario_idx = wd["scenarios"].index(next_sc)
+                
                 st.session_state.user_answer = None
                 st.session_state.ai_chat_history = []
                 st.session_state.ai_done = False
