@@ -716,12 +716,11 @@ def render_teach_ai():
     if not st.session_state.ai_done:
         placeholder_text = "Nhập lời giải thích của bạn... VD: 'Vì chiết suất lớn nên...'"
         
-        # 1. KHỞI TẠO BỘ NHỚ CHO Ô TEXT_AREA NẾU CHƯA CÓ
-        if "current_chat_input" not in st.session_state:
-            st.session_state.current_chat_input = ""
-
-        # 2. GẮN KEY VÀO TEXT_AREA
-        user_input = st.text_area("", placeholder=placeholder_text, height=120, label_visibility="collapsed", key="current_chat_input")
+        # 1. TẠO KEY ĐỘNG DỰA TRÊN SỐ LƯỢNG TIN NHẮN CHAT
+        input_key = f"chat_input_{len(st.session_state.ai_chat_history)}"
+        
+        # 2. GÁN KEY ĐỘNG NÀY VÀO TEXT AREA
+        user_input = st.text_area("", placeholder=placeholder_text, height=120, label_visibility="collapsed", key=input_key)
 
         col1, col2 = st.columns([2, 1])
         with col1:
@@ -732,8 +731,7 @@ def render_teach_ai():
                     # Lưu tin nhắn của người dùng
                     st.session_state.ai_chat_history.append({"role": "user", "content": user_input})
                     
-                    # 3. XÓA TRẮNG Ô NHẬP LIỆU NGAY LẬP TỨC
-                    st.session_state.current_chat_input = ""
+                    # (ĐÃ XÓA DÒNG st.session_state.current_chat_input = "" Ở ĐÂY)
                     
                     user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
                     
@@ -743,7 +741,7 @@ def render_teach_ai():
                     - Điểm nắm vững kiến thức này (0-1.0): {st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)}
                     """
 
-                    # 4. CẬP NHẬT PROMPT: Cấm AI tiết lộ thông số
+                    # Prompt hợp nhất: Cấm AI tiết lộ thông số
                     system_prompt = f"""Bạn là một Gia sư AI cá nhân hóa chuyên Vật lý.
 Context bài học hiện tại: {scenario['ai_context']}
 
