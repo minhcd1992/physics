@@ -865,66 +865,92 @@ def render_result():
     max_score = total * 10
     score = st.session_state.score
 
-    pct = int((score / max_score) * 100)
-
-    st.markdown('<div class="step-indicator step-active">// NHIỆM VỤ HOÀN THÀNH //</div>', unsafe_allow_html=True)
-
-    # Score display
-    st.markdown(f"""
-    <div class="glitch-card" style="text-align:center;padding:2rem">
-        <div class="score-label">TỔNG ĐIỂM</div>
-        <div class="score-big">{score}<span style="font-size:1.5rem;color:#3a6a8c">/{max_score}</span></div>
-        <div style="margin:1rem auto;max-width:300px">
-    """, unsafe_allow_html=True)
-    progress_bar(score, max_score)
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-    # Nhận xét chung
-    if pct == 100:
-        st.markdown('<div class="badge-correct" style="display:block;text-align:center;padding:0.8rem">🌟 HOÀN HẢO — Bạn là bậc thầy quang học!</div>', unsafe_allow_html=True)
-        msg = "Xuất sắc! Bạn đã phát hiện tất cả lỗi sai và hiểu bản chất hiện tượng khúc xạ thật sự."
-    elif pct >= 60:
-        st.markdown('<div class="badge-unsure" style="display:block;text-align:center;padding:0.8rem">👍 TỐT — Còn vài điểm cần ôn lại</div>', unsafe_allow_html=True)
-        msg = "Bạn đã hiểu phần lớn. Hãy chú ý đến danh sách kiến thức cần ôn tập bên dưới nhé."
-    else:
-        st.markdown('<div class="badge-wrong" style="display:block;text-align:center;padding:0.8rem">📚 CẦN CỐ GẮNG — Đừng nản chí!</div>', unsafe_allow_html=True)
-        msg = "Những lỗi sai đã đánh lừa bạn — đó là bình thường! Hãy xem lại các khái niệm chưa nắm vững và thử sức lần nữa."
-
-    st.markdown(f'<p style="color:#7eb8d4;text-align:center;margin:1rem 0">{msg}</p>', unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-
     # ==========================================
-    # PHÂN LOẠI KIẾN THỨC DỰA VÀO STUDENT MODEL
+    # 1. PHÂN LOẠI KIẾN THỨC DỰA VÀO STUDENT MODEL
     # ==========================================
     mastered = []
     needs_review = []
     
     for sc in wd["scenarios"]:
         concept = sc['concept']
-        # Lấy điểm mastery (Mặc định khởi tạo là 0.5. Nếu trả lời đúng lên 0.65, sai tụt xuống 0.35)
         mastery = st.session_state.student_model["concept_mastery"].get(concept, 0.5)
         
-        # Phân loại: Ngưỡng 0.6 là chuẩn xác để biết học sinh có làm đúng hay không
+        # Ngưỡng 0.6 là chuẩn xác để biết học sinh có nắm vững không
         if mastery >= 0.6:
             mastered.append(concept)
         else:
             needs_review.append(concept)
 
-    # 1. Hiển thị nhóm Cần ôn tập (Ưu tiên đập vào mắt trước)
+    # ==========================================
+    # 2. RENDER GIAO DIỆN HEADER & ĐIỂM
+    # ==========================================
+    st.markdown('<div class="step-indicator step-active">// BÁO CÁO NHẬN THỨC //</div>', unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="glitch-card" style="text-align:center;padding:2rem">
+        <div class="score-label">ĐIỂM TRẮC NGHIỆM</div>
+        <div class="score-big">{score}<span style="font-size:1.5rem;color:#3a6a8c">/{max_score}</span></div>
+        <div style="margin:1rem auto;max-width:300px">
+    """, unsafe_allow_html=True)
+    progress_bar(score, max_score)
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+    # ==========================================
+    # 3. LỜI NHẬN XÉT ĐƯỢC ĐỒNG BỘ VỚI MASTERY (KHÔNG CHỈ NHÌN ĐIỂM SỐ)
+    # ==========================================
+    if len(needs_review) == 0 and score == max_score:
+        st.markdown('<div class="badge-correct" style="display:block;text-align:center;padding:0.8rem">🌟 HOÀN HẢO — Bạn thực sự là bậc thầy!</div>', unsafe_allow_html=True)
+        msg = "Trắc nghiệm chuẩn xác, lập luận chặt chẽ. AI hoàn toàn bị thuyết phục bởi kiến thức của bạn."
+    elif len(needs_review) == 0:
+        st.markdown('<div class="badge-correct" style="display:block;text-align:center;padding:0.8rem">🌟 RẤT TỐT — Nhận thức vững vàng!</div>', unsafe_allow_html=True)
+        msg = "Dù trắc nghiệm có chút sai sót, nhưng bạn đã sửa sai xuất sắc trong phần thảo luận với AI."
+    elif len(mastered) >= len(needs_review):
+        st.markdown('<div class="badge-unsure" style="display:block;text-align:center;padding:0.8rem">👍 KHÁ TỐT — Có nền tảng nhưng chưa sâu</div>', unsafe_allow_html=True)
+        msg = f"Bạn trả lời đúng trắc nghiệm nhưng AI phát hiện ra bạn vẫn bị lấn cấn ở {len(needs_review)} khái niệm. Hãy xem kỹ bên dưới."
+    else:
+        st.markdown('<div class="badge-wrong" style="display:block;text-align:center;padding:0.8rem">📚 CẦN CỐ GẮNG — Lỗ hổng kiến thức khá lớn</div>', unsafe_allow_html=True)
+        msg = "Có vẻ bạn đã đoán lụi trắc nghiệm hoặc chưa hiểu rõ bản chất. Đừng lo, học từ sai lầm là cách tốt nhất!"
+
+    st.markdown(f'<p style="color:#7eb8d4;text-align:center;margin:1rem 0">{msg}</p>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ==========================================
+    # 4. CHỈ ĐIỂM SAI LẦM VÀ ĐƯA LỜI KHUYÊN
+    # ==========================================
     if needs_review:
-        st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#ffca28;letter-spacing:0.15em">⚠️ KIẾN THỨC CHƯA NẮM VỮNG (CẦN ÔN LẠI)</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#ffca28;letter-spacing:0.15em">⚠️ GÓC CHẨN ĐOÁN (CẦN ÔN TẬP GẤP)</h3>', unsafe_allow_html=True)
         for concept in needs_review:
+            # Tìm lỗi sai gần nhất của concept này trong bộ nhớ
+            latest_mistake = "Lỗi chưa rõ (Có thể bạn đã bỏ qua thảo luận trước khi kịp hiểu bài)."
+            for m in reversed(st.session_state.student_model["mistakes"]):
+                if m["concept"] == concept:
+                    # Cắt bỏ phần mã lỗi tiếng Anh phía trước dấu ":" (nếu có)
+                    parts = m["type"].split(":", 1)
+                    if len(parts) > 1:
+                        latest_mistake = parts[1].strip()
+                    else:
+                        latest_mistake = m["type"]
+                    break
+
+            # In ra thẻ báo cáo chi tiết
             st.markdown(f"""
-            <div style="display:flex;align-items:center;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid #1a3a5c">
-                <span style="color:#ffca28;font-size:1.1rem">✗</span>
-                <span style="font-size:0.95rem;color:#e8f4ff">{concept}</span>
+            <div style="background:#0a1628; border-left: 3px solid #ffca28; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                <div style="color:#ffca28; font-weight: bold; font-size: 1.05rem; margin-bottom: 0.3rem;">✗ {concept}</div>
+                <div style="color:#e8f4ff; font-size: 0.9rem; margin-bottom: 0.6rem; line-height: 1.5;">
+                    <span style="color:#ff4b4b; font-weight:600;">Chuẩn đoán lỗi:</span> {latest_mistake}
+                </div>
+                <div style="color:#7eb8d4; font-size: 0.85rem; font-style: italic; background: #03040a; padding: 8px; border-radius: 4px;">
+                    💡 <b>Lời khuyên Sư phạm:</b> Hãy bấm "Ôn tập lại thế giới này". Khi vào lại tình huống này, hãy đọc kỹ phần "Giải thích khoa học" và thử lấy ví dụ đời sống để giảng lại cho AI nhé.
+                </div>
             </div>
             """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
-    # 2. Hiển thị nhóm Đã nắm vững
+    # ==========================================
+    # 5. HIỂN THỊ KIẾN THỨC NẮM VỮNG
+    # ==========================================
     if mastered:
-        st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#00ff88;letter-spacing:0.15em">✅ KIẾN THỨC ĐÃ NẮM VỮNG</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="font-family:\'Exo 2\',sans-serif;font-size:0.9rem;color:#00ff88;letter-spacing:0.15em">✅ ĐÃ THÔNG THẠO</h3>', unsafe_allow_html=True)
         for concept in mastered:
             st.markdown(f"""
             <div style="display:flex;align-items:center;gap:0.8rem;padding:0.5rem 0;border-bottom:1px solid #1a3a5c">
@@ -943,7 +969,6 @@ def render_result():
                 st.session_state[k] = defaults[k]
             go("choose")
     with col2:
-        # Nếu chơi lại, giữ nguyên Student Model để Adaptive Learning phát huy tác dụng
         if st.button("↩  ÔN TẬP LẠI THẾ GIỚI NÀY", use_container_width=True):
             st.session_state.scenario_idx = 0
             st.session_state.user_answer = None
