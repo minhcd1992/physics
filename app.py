@@ -814,32 +814,23 @@ def render_teach_ai():
                     # 1. Lưu tin nhắn của người dùng
                     st.session_state.ai_chat_history.append({"role": "user", "content": user_input})
                     
-                    # 2. Đếm xem người dùng đã chat bao nhiêu lượt
                     user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
 
-                    # 3. Thay đổi thái độ của AI dựa trên số lượt chat
-                    if user_turns >= 2:
-                        # Lượt cuối: Chốt vấn đề, không hỏi thêm
-                        system_prompt = f"""Bạn là một AI đang học vật lý.
+                    # 2. Prompt hợp nhất: Giao quyền tự quyết cho AI với từ khóa ẩn
+                    system_prompt = f"""Bạn là một AI đang được người dùng dạy về Vật lý.
 Context: {scenario['ai_context']}
 
-Học sinh vừa giải thích thêm cho bạn. Đây là lượt đối thoại cuối cùng.
-Vai trò của bạn:
-1. Ghi nhận lời giải thích của học sinh một cách tự nhiên, thân thiện.
-2. Tóm tắt lại ngắn gọn (2-3 câu) hiểu biết cuối cùng của bạn để chốt lại vấn đề.
-3. TUYỆT ĐỐI KHÔNG ĐẶT THÊM BẤT KỲ CÂU HỎI NÀO NỮA. Hãy cảm ơn học sinh vì đã giảng bài rất dễ hiểu."""
-                    else:
-                        # Lượt đầu: Hỏi đào sâu
-                        system_prompt = f"""Bạn là một AI đang học vật lý và cần học sinh dạy lại cho bạn.
-Context: {scenario['ai_context']}
+Đây là lượt chat thứ {user_turns}.
+Nhiệm vụ của bạn:
+1. Đọc kỹ lời giảng của người dùng.
+2. Nếu lời giảng CHƯA ĐỦ RÕ, hoặc bạn muốn đào sâu tư duy: Hãy hỏi THÊM 1 câu hỏi phụ gợi mở (ngắn gọn 2-3 câu). Tuyệt đối KHÔNG dùng từ khóa bí mật.
+3. Nếu người dùng giải thích RẤT CHÍNH XÁC, DỄ HIỂU, hoặc người dùng nói "không biết/chịu thua": 
+   - Tóm tắt lại kiến thức một cách thân thiện.
+   - Cảm ơn người dùng.
+   - BẮT BUỘC chèn thêm cụm từ chính xác này vào cuối câu trả lời: [ĐÃ_HIỂU]
+4. Nếu đã đến lượt chat thứ 5, bắt buộc phải chốt vấn đề và dùng cụm từ [ĐÃ_HIỂU] để tránh vòng lặp quá dài."""
 
-Vai trò của bạn:
-1. Ghi nhận lời giải thích của học sinh một cách tự nhiên, thân thiện.
-2. Đặt MỘT câu hỏi sâu hơn để kiểm tra sự hiểu biết của học sinh (ví dụ thực tế, trường hợp ngoại lệ...).
-3. Nếu giải thích CÓ LỖI, nhẹ nhàng chỉ ra và gợi ý để học sinh tự sửa.
-Trả lời ngắn gọn (3-4 câu)."""
-
-                    # 4. Gọi API Gemini
+                    # 3. Gọi API Gemini
                     if has_api:
                         with st.spinner("AI đang suy nghĩ..."):
                             try:
@@ -858,21 +849,24 @@ Trả lời ngắn gọn (3-4 câu)."""
                                 ai_reply = f"⚠️ Lỗi kết nối API Gemini: {str(e)}"
                     else:
                         time.sleep(1)
-                        if user_turns >= 5:
-                            ai_reply = f"À, mình hiểu hoàn toàn rồi! Hóa ra {scenario['concept']} là như vậy. Cảm ơn bạn đã kiên nhẫn giảng giải cho mình nhé!"
+                        if user_turns >= 3:
+                            ai_reply = f"À, mình hiểu hoàn toàn rồi! Hóa ra {scenario['concept']} là như vậy. Cảm ơn bạn đã kiên nhẫn giảng giải cho mình nhé! [ĐÃ_HIỂU]"
                         else:
-                            ai_reply = f"Cảm ơn bạn! Mình hiểu hơn rồi. Vậy bạn có thể cho mình một ví dụ thực tế được không?"
+                            ai_reply = f"Cảm ơn bạn! Mình hiểu một phần rồi. Vậy bạn có thể giải thích rõ hơn về ví dụ thực tế được không?"
 
-                    # 5. Lưu phản hồi của AI và kiểm tra kết thúc
-                    st.session_state.ai_chat_history.append({"role": "assistant", "content": ai_reply})
-
-                    if user_turns >= 2:
+                    # 4. Kiểm tra từ khóa ẩn để kết thúc bài học
+                    if "[ĐÃ_HIỂU]" in ai_reply:
                         st.session_state.ai_done = True
+                        # Cắt bỏ từ khóa để không hiển thị lên giao diện
+                        ai_reply = ai_reply.replace("[ĐÃ_HIỂU]", "").strip()
+
+                    # 5. Lưu phản hồi của AI
+                    st.session_state.ai_chat_history.append({"role": "assistant", "content": ai_reply})
 
                     st.rerun()
 
         with col2:
-            if st.button("Bỏ qua →"):
+            if st.button("Kết thúc thảo luận →"):
                 st.session_state.ai_done = True
                 st.rerun()
 
@@ -892,7 +886,6 @@ Trả lời ngắn gọn (3-4 câu)."""
         else:
             if st.button("🏆  XEM KẾT QUẢ CUỐI CÙNG", type="primary", use_container_width=True):
                 go("result")
-
 # ==========================================
 # TRANG KẾT QUẢ
 # ==========================================
