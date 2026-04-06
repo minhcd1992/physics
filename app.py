@@ -712,9 +712,11 @@ def render_scenario():
 
     scenario = wd["scenarios"][idx]
 
-    # Header
-    st.markdown(f'<div class="step-indicator step-active">// {wd["emoji"]} {wd["name"].upper()} — TÌNH HUỐNG {idx+1}/{total} //</div>', unsafe_allow_html=True)
-    progress_bar(idx + 1, total)
+   # Header: Tính toán số câu đã hoàn thành để hiển thị thanh tiến trình chuẩn xác
+    current_step = len(st.session_state.answered_scenarios) + 1
+    
+    st.markdown(f'<div class="step-indicator step-active">// {wd["emoji"]} {wd["name"].upper()} — TÌNH HUỐNG {current_step}/{total} //</div>', unsafe_allow_html=True)
+    progress_bar(current_step, total)
 
     st.markdown(f'<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:{wd["color"]};margin-bottom:0.3rem">{scenario["concept"]}</h2>', unsafe_allow_html=True)
 
