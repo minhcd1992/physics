@@ -767,8 +767,8 @@ def render_analysis():
     """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🤖  TIẾP THEO: DẠY AI  →", type="primary", use_container_width=True):
-        go("teach_ai")
+    if st.button("🤖  TIẾP THEO: ĐÀO SÂU BẢN CHẤT  →", type="primary", use_container_width=True):
+        go("Đào sâu Bản chất")
 
 # ==========================================
 # TRANG DẠY AI
@@ -790,9 +790,9 @@ def render_teach_ai():
     except Exception:
         pass
 
-    st.markdown('<div class="step-indicator step-active">// MODULE 3 — DẠY AI //</div>', unsafe_allow_html=True)
-    st.markdown('<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:#00d4ff">AI đang cần sự giúp đỡ của bạn</h2>', unsafe_allow_html=True)
-    st.markdown(f'<p style="color:#7eb8d4">Giải thích lại khái niệm <strong style="color:#e8f4ff">"{scenario["concept"]}"</strong> cho AI bằng ngôn từ của chính bạn. AI sẽ đọc và phản hồi thật sự.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="step-indicator step-active">// MODULE 3 — ĐÀO SÂU BẢN CHẤT //</div>', unsafe_allow_html=True)
+    st.markdown('<h2 style="font-family:\'Exo 2\',sans-serif;font-size:1.1rem;color:#00d4ff">Cùng thảo luận sâu hơn</h2>', unsafe_allow_html=True)
+    st.markdown(f'<p style="color:#7eb8d4">Thảo luận để <strong style="color:#e8f4ff">"{scenario["concept"]}"</strong> hiểu sâu hơn những khía cạnh khác, đừng ngại sai</p>', unsafe_allow_html=True)
 
     # Hiển thị lịch sử chat
     for msg in st.session_state.ai_chat_history:
@@ -960,5 +960,5 @@ if page == "home":        render_home()
 elif page == "choose":    render_choose()
 elif page == "scenario":  render_scenario()
 elif page == "analysis":  render_analysis()
-elif page == "teach_ai":  render_teach_ai()
+elif page == "Đào sâu Bản chất":  render_teach_ai()
 elif page == "result":    render_result()
