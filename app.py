@@ -855,9 +855,7 @@ def render_teach_ai():
                     st.session_state.ai_chat_history.append({"role": "user", "content": user_input})
                     
                     user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
-
-                    # 2. Prompt hợp nhất: Giao quyền tự quyết cho AI với từ khóa ẩn
-                    system_prompt = # Chuẩn bị dữ liệu học sinh dạng chuỗi để đưa cho AI
+                    # Chuẩn bị dữ liệu học sinh dạng chuỗi để đưa cho AI
                     student_data = f"""
                     - Lịch sử sai lầm: {[m['type'] for m in st.session_state.student_model['mistakes'][-3:]]} 
                     - Điểm nắm vững kiến thức này (0-1.0): {st.session_state.student_model['concept_mastery'].get(scenario['concept'], 0.5)}
