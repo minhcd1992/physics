@@ -745,47 +745,61 @@ def render_teach_ai():
                 if len(user_input.strip()) < 10:
                     st.error("Hãy giải thích chi tiết hơn! (ít nhất 10 ký tự)")
                 else:
+                    # 1. Lưu tin nhắn của người dùng
                     st.session_state.ai_chat_history.append({"role": "user", "content": user_input})
+                    
+                    # 2. Đếm xem người dùng đã chat bao nhiêu lượt
+                    user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
 
-                    system_prompt = f"""Bạn là một AI đang học vật lý và cần học sinh dạy lại cho bạn.
+                    # 3. Thay đổi thái độ của AI dựa trên số lượt chat
+                    if user_turns >= 2:
+                        # Lượt cuối: Chốt vấn đề, không hỏi thêm
+                        system_prompt = f"""Bạn là một AI đang học vật lý.
+Context: {scenario['ai_context']}
+
+Học sinh vừa giải thích thêm cho bạn. Đây là lượt đối thoại cuối cùng.
+Vai trò của bạn:
+1. Ghi nhận lời giải thích của học sinh một cách tự nhiên, thân thiện.
+2. Tóm tắt lại ngắn gọn (2-3 câu) hiểu biết cuối cùng của bạn để chốt lại vấn đề.
+3. TUYỆT ĐỐI KHÔNG ĐẶT THÊM BẤT KỲ CÂU HỎI NÀO NỮA. Hãy cảm ơn học sinh vì đã giảng bài rất dễ hiểu."""
+                    else:
+                        # Lượt đầu: Hỏi đào sâu
+                        system_prompt = f"""Bạn là một AI đang học vật lý và cần học sinh dạy lại cho bạn.
 Context: {scenario['ai_context']}
 
 Vai trò của bạn:
-1. Ghi nhận lời giải thích của học sinh một cách tự nhiên, thân thiện
-2. Đặt MỘT câu hỏi sâu hơn để kiểm tra sự hiểu biết của học sinh (hỏi về ứng dụng thực tế, ví dụ cụ thể, hoặc trường hợp đặc biệt)
-3. Nếu giải thích CÓ LỖI, nhẹ nhàng chỉ ra và đặt câu hỏi gợi ý để học sinh tự sửa
+1. Ghi nhận lời giải thích của học sinh một cách tự nhiên, thân thiện.
+2. Đặt MỘT câu hỏi sâu hơn để kiểm tra sự hiểu biết của học sinh (ví dụ thực tế, trường hợp ngoại lệ...).
+3. Nếu giải thích CÓ LỖI, nhẹ nhàng chỉ ra và gợi ý để học sinh tự sửa.
+Trả lời ngắn gọn (3-4 câu)."""
 
-Trả lời bằng tiếng Việt, ngắn gọn (3-5 câu), thân thiện và tò mò như một AI đang học hỏi."""
-
+                    # 4. Gọi API Gemini
                     if has_api:
                         with st.spinner("AI đang suy nghĩ..."):
                             try:
-                                # Dùng chính xác tên model trong danh sách của bạn
                                 model = genai.GenerativeModel(
                                     model_name="gemini-2.5-flash",
                                     system_instruction=system_prompt
                                 )
-                                
-                                # Chuyển đổi lịch sử chat
                                 gemini_history = []
                                 for m in st.session_state.ai_chat_history:
                                     role = "user" if m["role"] == "user" else "model"
                                     gemini_history.append({"role": role, "parts": [m["content"]]})
                                 
-                                # Gọi API Gemini
                                 response = model.generate_content(gemini_history)
                                 ai_reply = response.text
                             except Exception as e:
                                 ai_reply = f"⚠️ Lỗi kết nối API Gemini: {str(e)}"
                     else:
-                        # Fallback thông minh nếu không có API
                         time.sleep(1)
-                        ai_reply = f"Cảm ơn bạn đã giải thích về **{scenario['concept']}**! Tôi hiểu hơn rồi. Vậy bạn có thể cho tôi một ví dụ thực tế trong cuộc sống hàng ngày mà bạn có thể quan sát nguyên lý này không? *(Lưu ý: Đang dùng AI mô phỏng — cần Gemini API key để nhận phản hồi thật)*"
+                        if user_turns >= 5:
+                            ai_reply = f"À, mình hiểu hoàn toàn rồi! Hóa ra {scenario['concept']} là như vậy. Cảm ơn bạn đã kiên nhẫn giảng giải cho mình nhé!"
+                        else:
+                            ai_reply = f"Cảm ơn bạn! Mình hiểu hơn rồi. Vậy bạn có thể cho mình một ví dụ thực tế được không?"
 
+                    # 5. Lưu phản hồi của AI và kiểm tra kết thúc
                     st.session_state.ai_chat_history.append({"role": "assistant", "content": ai_reply})
 
-                    # Sau 2 lượt thì đánh dấu xong
-                    user_turns = sum(1 for m in st.session_state.ai_chat_history if m["role"] == "user")
                     if user_turns >= 2:
                         st.session_state.ai_done = True
 
