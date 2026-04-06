@@ -692,11 +692,13 @@ def render_analysis():
     # Scenario lại
     st.markdown(f'<div class="scenario-box" style="opacity:0.7;font-size:0.9rem">{scenario["statement"]}</div>', unsafe_allow_html=True)
 
-    # Giải thích
-    st.markdown('<div class="explain-box">', unsafe_allow_html=True)
-    st.markdown(f'<strong style="color:#00ff88;font-family:\'Exo 2\',sans-serif;font-size:0.8rem;letter-spacing:0.1em">GIẢI THÍCH KHOA HỌC</strong>', unsafe_allow_html=True)
-    st.markdown(f'<p style="margin:0.5rem 0 0;color:#b8ffe0">{scenario["explanation"]}</p>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Giải thích đã được gộp lại thành 1 khối
+    st.markdown(f"""
+    <div class="explain-box">
+        <strong style="color:#00ff88;font-family:'Exo 2',sans-serif;font-size:0.8rem;letter-spacing:0.1em">GIẢI THÍCH KHOA HỌC</strong>
+        <p style="margin:0.5rem 0 0;color:#b8ffe0">{scenario["explanation"]}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🤖  TIẾP THEO: DẠY AI  →", type="primary", use_container_width=True):
